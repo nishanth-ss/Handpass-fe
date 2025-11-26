@@ -1,6 +1,6 @@
 import { useState } from 'react';
-// Import connection interface (adapts to Document 2.1; ensure handpassApi.js has wrapped the connectTest method)
-import { connectTest } from '../api/handpassApi';
+import { connectTest } from '../api/connecttestApi';
+// Import connection interface from dedicated connecttestApi module
 
 const ConnectTest = () => {
   // State management: Device serial number, test result, loading state
@@ -28,13 +28,14 @@ const ConnectTest = () => {
       // 3. Handle interface response (complies with the document's common response format)
       if (res.code === 0) {
         setTestResult(`Connection successful! (Document 2.1 Interface called successfully, sn: ${sn.trim()})`);
-      } else {
+      } 
+      // else {
         // Match Document 3.1 error codes (e.g., 20000 = Network Error)
-        setTestResult(`Connection failed: ${res.msg} (Error Code ${res.code}, refer to Document 3.1)`);
-      }
+        // setTestResult(`Connection failed: ${res.msg} (Error Code ${res.code}, refer to Document 3.1)`); AI code
+      // }
     } catch (error) {
       // Network exception (Document 3.1 Error Code 20000)
-      setTestResult(`Network error: Please check if the backend service is running (Error Code 20000, Document 3.1)`);
+      // setTestResult(`Network error: Please check if the backend service is running (Error Code 20000, Document 3.1)`); AI code
     } finally {
       setIsLoading(false);
     }

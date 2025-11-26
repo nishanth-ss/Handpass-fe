@@ -1,11 +1,8 @@
 import axios from 'axios';
+import { API_BASE_URL } from './config';
 
-// Get current host (dynamically adapt to the deployment environment)
-const currentHost = window.location.hostname;
-// Dynamically generated base URL (matches the backend API base path: http://{host}:3001/v1)
-const baseURL = `http://${currentHost}:3001/v1`;
 const handpassApi = axios.create({
-  baseURL: baseURL, 
+  baseURL: API_BASE_URL, 
   headers: {
     'Content-Type': 'application/json;charset=UTF-8'
   },
@@ -22,9 +19,16 @@ const handpassApi = axios.create({
 //   timeout: 5000
 // });
 
-// Request interceptor (original code, no modification needed)
+// Request interceptor: attach auth token to every request (except login, which uses a different axios instance)
 handpassApi.interceptors.request.use(
-  (config) => config,
+  (config) => {
+    const token = window.localStorage.getItem('authToken');
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
   (error) => Promise.reject(error)
 );
 

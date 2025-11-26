@@ -1,22 +1,39 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { login } from '../api/auth';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
 
-    if (username === 'Admin' && password === 'admin@123') {
-        console.log(username,password);
-        
-      setError('');
-      navigate('/dashboard');
-    } else {
-      setError('Invalid username or password');
+    try {
+      // username is treated as email here
+      const { data } = await login(username, password);
+
+      // TODO: Adjust these field names to match your backend response
+      const token = data?.token || data?.accessToken || data?.jwt;
+
+      if (token) {
+        // Store token so that handpassApi can attach it to all subsequent requests
+        window.localStorage.setItem('authToken', token);
+        navigate('/dashboard');
+      } else {
+        const msg = data?.message || data?.error || 'Invalid username or password';
+        setError(msg);
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.response?.data?.error || 'Login failed. Please try again.';
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
