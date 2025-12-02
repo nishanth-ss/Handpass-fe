@@ -30,7 +30,6 @@ const DeviceQuery = () => {
   const [passModalVisible, setPassModalVisible] = useState(false);
   const [currentSn, setCurrentSn] = useState(''); // Current device serial number (sn) for operations
   const [paginationData,setPaginationData] = useState({});
-  console.log(paginationData);
   
 
   // Fetch all devices when page loads
@@ -106,7 +105,7 @@ const DeviceQuery = () => {
       {/* Device list table */}
       {loading ? (
         <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>⏳ Loading device list...</div>
-      ) : deviceList.length > 0 ? (
+      ) : deviceList?.length > 0 ? (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
           <thead>
             <tr style={{ backgroundColor: '#f5f7fa' }}>

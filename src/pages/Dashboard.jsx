@@ -8,6 +8,7 @@ import ConnectTest from '../components/ConnectTest';
 import PassRecord from '../components/PassRecord';
 import FirmwareCheck from '../components/FirmwareCheck';
 import DeviceQuery from '../components/DeviceQuery';
+import GroupManagement from '../components/GroupManagement';
 
 
 const GlobalStyles = () => (
@@ -67,6 +68,7 @@ const Dashboard = () => {
     { key: 'delete', label: 'User Delete', icon: '🗑️' },
     { key: 'query', label: 'User Query', icon: '🔍' },
     { key: 'imageQuery', label: 'User Image', icon: '🖼️' },
+    { key: 'group', label: 'Group Management', icon: '👥' },
     { key: 'passRecord', label: 'Pass Record', icon: '📊' },
     { key: 'device', label: 'Device Management', icon: '📱' },
     { key: 'firmware', label: 'Firmware Check', icon: '🔄' }
@@ -194,9 +196,9 @@ const Dashboard = () => {
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
               padding: '28px',
               flex: 1,
-              display: 'flex',
-              alignItems: 'flex-start',
-              justifyContent: 'center',
+              // display: 'flex',
+              // alignItems: 'flex-start',
+              // justifyContent: 'center',
               overflowY: 'auto'
             }}
           >
@@ -206,6 +208,7 @@ const Dashboard = () => {
             {activeTab === 'query' && <UserQuery />}
             {activeTab === 'imageQuery' && <ImageQuery />}
             {activeTab === 'passRecord' && <PassRecord />}
+            {activeTab === 'group' && <GroupManagement />}
             {activeTab === 'device' && <DeviceQuery />}
             {activeTab === 'firmware' && <FirmwareCheck />}
           </div>
