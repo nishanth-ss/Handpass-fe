@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { getAllDevices, getUsersByDeviceSn, getPassRecordsByDeviceSn } from '../api/handpassApi';
 import UserDeviceModal from './UserDeviceModal';  
 import PassRecordModal from './PassRecordModal'; 
-import { getAllConnectTest } from '../api/deviceManagementApi';
 
 // Connection status tag style (visually distinguish online/offline)
 const OnlineStatusTag = ({ status }) => {
@@ -29,9 +28,6 @@ const DeviceQuery = () => {
   const [userModalVisible, setUserModalVisible] = useState(false);
   const [passModalVisible, setPassModalVisible] = useState(false);
   const [currentSn, setCurrentSn] = useState(''); // Current device serial number (sn) for operations
-  const [paginationData,setPaginationData] = useState({});
-  console.log(paginationData);
-  
 
   // Fetch all devices when page loads
   useEffect(() => {
@@ -42,18 +38,13 @@ const DeviceQuery = () => {
   const fetchAllDevices = async () => {
     setLoading(true);
     try {
-      const res = await getAllConnectTest();
-      if(res.status){
-        setDeviceList(res.data);
-        setPaginationData(res.pagination);
+      const res = await getAllDevices();
+      if (res.code === 0) {
+        setDeviceList(res.data.deviceList || []);
+        setMsg(`Total ${res.data.deviceList?.length || 0} devices found`);
+      } else {
+        setMsg(`Query failed: ${res.msg} (Error Code ${res.code})`);
       }
-      // const res = await getAllDevices();
-      // if (res.code === 0) {
-      //   setDeviceList(res.data.deviceList || []);
-      //   setMsg(`Total ${res.data.deviceList?.length || 0} devices found`);
-      // } else {
-      //   setMsg(`Query failed: ${res.msg} (Error Code ${res.code})`);
-      // }
     } catch (error) {
       setMsg('Network error: Please check the backend service');
     } finally {
@@ -83,7 +74,7 @@ const DeviceQuery = () => {
       boxShadow: '0 2px 12px rgba(0,0,0,0.05)'
     }}>
       <h2 style={{ margin: '0 0 20px 0', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span>📱 Device Management (Total {paginationData?.total})</span>
+        <span>📱 Device Management (Total {deviceList.length})</span>
         <button
           onClick={fetchAllDevices}
           style={{ marginLeft: 'auto', padding: '6px 12px', fontSize: '12px', border: '1px solid #ddd', borderRadius: '4px', cursor: 'pointer' }}

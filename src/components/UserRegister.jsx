@@ -3,6 +3,7 @@ import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 // Import registration interface (adapts to Document 2.2 Registration Interface; ensure handpassApi.js has wrapped this interface)
 import { registerUser, checkRegistration } from '../api/handpassApi';
+import { createUser } from '../api/usersApi';
 
 const UserRegister = () => {
   // 1. Basic information state (corresponds to required parameters of Document 2.2 Registration Interface, ensuring alignment with users table fields in the database)
@@ -64,17 +65,18 @@ const UserRegister = () => {
 
       // 4.3 Construct registration interface parameters (strictly align with Document 2.2 request parameter format)
       const registerData = {
-  sn: sn.trim(),
-  name: name.trim(),
-  id: userId.trim(), // Correct: Pass "id" (student ID) per Document 2.2, not "user_id"
-  image_left: leftImage,
-  image_right: rightImage,
-  wiegand_flag: wiegandFlag,
-  admin_auth: adminAuth
-};
+        sn: sn.trim(),
+        name: name.trim(),
+        id: userId.trim(), // Correct: Pass "id" (student ID) per Document 2.2, not "user_id"
+        image_left: leftImage,
+        image_right: rightImage,
+        wiegand_flag: wiegandFlag,
+        admin_auth: adminAuth
+      };
 
       // 4.4 Call registration interface (Document 2.2 Interface; save data to users table in the database)
-      const registerRes = await registerUser(registerData);
+      // const registerRes = await registerUser(registerData);
+      const registerRes = await createUser(registerData);
       if (registerRes.code === 0) {
         setSubmitMsg('Registration successful! (Document 2.2 Interface called successfully)');
         // Reset form (clear after successful registration)
@@ -95,10 +97,28 @@ const UserRegister = () => {
     }
   };
 
+  const handleSubmit1 = async (e)=>{
+    e.preventDefault()
+    try {
+      const response = await createUser({
+        sn: sn.trim(),
+        name: name.trim(),
+        id: userId.trim(), // Correct: Pass "id" (student ID) per Document 2.2, not "user_id"
+        image_left: leftImage,
+        image_right: rightImage,
+        wiegand_flag: wiegandFlag,
+        admin_auth: adminAuth
+      });
+      console.log(response)
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+    <div style={{ padding: '', maxWidth: '', margin: '' }}>
       <h2>Palm Registration (Adapts to Document 2.2 Registration Interface)</h2>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+      <form onSubmit={handleSubmit1} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '40px' }}>
         {/* 1. Device Serial Number (required in Document 2.2) */}
         <div>
           <label style={{ display: 'block', marginBottom: '5px' }}>
@@ -220,6 +240,8 @@ const UserRegister = () => {
             </div>
           )}
         </div>
+        <div></div>
+        <div></div>
 
         {/* 8. Submit Button & Result Prompt */}
         <button
@@ -231,7 +253,10 @@ const UserRegister = () => {
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer',
-            fontSize: '16px'
+            fontSize: '16px',
+            width: "500px",
+            maxWidth: '600px',
+            marginLeft: "auto"
           }}
         >
           Submit Registration (Call Document 2.2 Interface)
