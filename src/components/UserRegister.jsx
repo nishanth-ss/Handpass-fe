@@ -19,35 +19,59 @@ const UserRegister = () => {
   const [leftCrop, setLeftCrop] = useState({ unit: '%', width: 50, aspect: 1 }); // 1:1 ratio for palm adaptation
   const [rightImage, setRightImage] = useState(null); // Right palm image (base64)
   const [rightCrop, setRightCrop] = useState({ unit: '%', width: 50, aspect: 1 });
+  const [leftFileSize, setLeftFileSize] = useState(0);
+  const [rightFileSize, setRightFileSize] = useState(0);
 
   // 3. Handle image upload (convert to base64, adapting to Document 2.2 requirement: "image parameters must be base64 encoded")
   const handleImageChange = (e, type) => {
     const file = e.target.files[0];
-    if (file) {
-      // Restrict image format (images only) and size (avoid overly long base64; adjust as needed)
-      if (!file.type.startsWith('image/')) {
-        setSubmitMsg('Please upload an image file (e.g., JPG, PNG)');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) { // Limit to 5MB or less
-        setSubmitMsg('Image size cannot exceed 5MB');
-        return;
-      }
+    if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (type === 'left') setLeftImage(event.target.result);
-        if (type === 'right') setRightImage(event.target.result);
-        setSubmitMsg(''); // Clear previous error prompts
-      };
-      reader.readAsDataURL(file); // Convert to base64 format (required by Document 2.2)
+    // Set file size
+    if (type === 'left') {
+      setLeftFileSize(file.size);
+    } else {
+      setRightFileSize(file.size);
     }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        // Get the binary string directly from the ArrayBuffer
+        const binaryString = Array.from(new Uint8Array(event.target.result))
+          .map(byte => String.fromCharCode(byte))
+          .join('');
+
+        // Convert to base64
+        const base64String = btoa(binaryString);
+
+        if (type === 'left') {
+          setLeftImage(base64String);
+        } else {
+          setRightImage(base64String);
+        }
+      } catch (error) {
+        console.error('Error processing image:', error);
+        setSubmitMsg(`Error processing ${type} image: ${error.message}`);
+      }
+    };
+
+    // Handle any errors during file reading
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error);
+      setSubmitMsg(`Error reading ${type} image file`);
+    };
+
+    // Read the file as an ArrayBuffer
+    reader.readAsArrayBuffer(file);
   };
 
   // 4. Form submission (adapts to Document 2.2 Registration Interface; submits complete data to the database)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitMsg('');
+    console.log(leftImage);
+    
 
     // 4.1 Basic form validation (ensure required fields are not empty, adapting to Document 2.2 required parameters)
     if (!sn.trim()) return setSubmitMsg('Device serial number (sn) cannot be empty (required in Document 2.2)');
@@ -67,58 +91,27 @@ const UserRegister = () => {
       const registerData = {
         sn: sn.trim(),
         name: name.trim(),
-        id: userId.trim(), // Correct: Pass "id" (student ID) per Document 2.2, not "user_id"
-        image_left: leftImage,
-        image_right: rightImage,
+        id: userId.trim(),
+        image_left: `data:image/raw;base64,${leftImage}`, // Add proper data URL prefix
+        image_right: `data:image/raw;base64,${rightImage}`, // Add proper data URL prefix
         wiegand_flag: wiegandFlag,
         admin_auth: adminAuth
       };
 
       // 4.4 Call registration interface (Document 2.2 Interface; save data to users table in the database)
-      // const registerRes = await registerUser(registerData);
-      const registerRes = await createUser(registerData);
-      if (registerRes.code === 0) {
-        setSubmitMsg('Registration successful! (Document 2.2 Interface called successfully)');
-        // Reset form (clear after successful registration)
-        setSn('');
-        setName('');
-        setUserId('');
-        setWiegandFlag(0);
-        setAdminAuth(0);
-        setLeftImage(null);
-        setRightImage(null);
-      } else {
-        // Adapt to Document 3.1 error codes (e.g., 10000 = Parameter Error, 30002 = Database Insertion Failed)
-        setSubmitMsg(`Registration failed: ${registerRes.msg} (Error Code ${registerRes.code}, Document 3.1)`);
-      }
+      const registerRes = await registerUser(registerData);
 
     } catch (error) {
-      setSubmitMsg('Network Error: Please check if the backend service is running (Document 2.2 Interface call failed)');
+      console.error('Registration error:', error);
+      const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
+      setSubmitMsg(`Network Error: ${errorMsg}. Please check if the backend service is running.`);
     }
   };
-
-  const handleSubmit1 = async (e)=>{
-    e.preventDefault()
-    try {
-      const response = await createUser({
-        sn: sn.trim(),
-        name: name.trim(),
-        id: userId.trim(), // Correct: Pass "id" (student ID) per Document 2.2, not "user_id"
-        image_left: leftImage,
-        image_right: rightImage,
-        wiegand_flag: wiegandFlag,
-        admin_auth: adminAuth
-      });
-      console.log(response)
-    } catch (error) {
-      console.log(error)
-    }
-  }
 
   return (
     <div style={{ padding: '', maxWidth: '', margin: '' }}>
       <h2>Palm Registration (Adapts to Document 2.2 Registration Interface)</h2>
-      <form onSubmit={handleSubmit1} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '40px' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '40px' }}>
         {/* 1. Device Serial Number (required in Document 2.2) */}
         <div>
           <label style={{ display: 'block', marginBottom: '5px' }}>
@@ -190,28 +183,23 @@ const UserRegister = () => {
             <option value={1}>Has Permission (1)</option>
           </select>
         </div>
+        <div></div>
 
         {/* 6. Left Palm Image (required in Document 2.2, base64 encoded) */}
         <div>
           <label style={{ display: 'block', marginBottom: '5px' }}>
-            Left Palm Image <span style={{ color: 'red' }}>*</span> (Document 2.2 Parameter: image_left)
+            Left Palm Image <span style={{ color: 'red' }}>*</span> (RAW format)
           </label>
           <input
             type="file"
-            accept="image/*"
+            accept=".raw"
             onChange={(e) => handleImageChange(e, 'left')}
             style={{ padding: '8px' }}
           />
-          {/* Image preview area (1:1 ratio for palm adaptation) */}
           {leftImage && (
-            <div style={{ marginTop: '10px', width: '200px', height: '200px', border: '1px solid #eee' }}>
-              <ReactCrop
-                src={leftImage}
-                crop={leftCrop}
-                onChange={setLeftCrop}
-                keepSelection
-                style={{ width: '100%', height: '100%' }}
-              />
+            <div style={{ marginTop: '10px', padding: '10px', border: '1px solid #eee' }}>
+              <p>✅ Left palm RAW file loaded</p>
+              <p>File size: {Math.round(leftFileSize / 1024)} KB</p>
             </div>
           )}
         </div>
@@ -219,28 +207,22 @@ const UserRegister = () => {
         {/* 7. Right Palm Image (required in Document 2.2, base64 encoded) */}
         <div>
           <label style={{ display: 'block', marginBottom: '5px' }}>
-            Right Palm Image <span style={{ color: 'red' }}>*</span> (Document 2.2 Parameter: image_right)
+            Right Palm Image <span style={{ color: 'red' }}>*</span> (RAW format)
           </label>
           <input
             type="file"
-            accept="image/*"
+            accept=".raw"
             onChange={(e) => handleImageChange(e, 'right')}
             style={{ padding: '8px' }}
           />
-          {/* Image preview area (1:1 ratio for palm adaptation) */}
           {rightImage && (
-            <div style={{ marginTop: '10px', width: '200px', height: '200px', border: '1px solid #eee' }}>
-              <ReactCrop
-                src={rightImage}
-                crop={rightCrop}
-                onChange={setRightCrop}
-                keepSelection
-                style={{ width: '100%', height: '100%' }}
-              />
+            <div style={{ marginTop: '10px', padding: '10px', border: '1px solid #eee' }}>
+              <p>✅ Right palm RAW file loaded</p>
+              <p>File size: {Math.round(rightFileSize / 1024)} KB</p>
             </div>
           )}
+
         </div>
-        <div></div>
         <div></div>
 
         {/* 8. Submit Button & Result Prompt */}
@@ -259,7 +241,7 @@ const UserRegister = () => {
             marginLeft: "auto"
           }}
         >
-          Submit Registration (Call Document 2.2 Interface)
+          Submit Registration
         </button>
 
         {submitMsg && (

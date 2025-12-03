@@ -1,6 +1,8 @@
 // frontend/src/components/components/UserDeviceModal.js
 import { useState, useEffect } from 'react';
-import { getUsersByDeviceSn } from '../api/handpassApi';
+import { getUsersByDeviceSn, userUpdatePermission } from '../api/handpassApi';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 
 // Image Preview Modal (View left/right palm images)
 const ImagePreviewModal = ({ visible, imageSrc, onClose, title }) => {
@@ -69,12 +71,12 @@ const UserDeviceModal = ({ visible, sn, onClose }) => {
     setLoading(true);
     try {
       const res = await getUsersByDeviceSn(sn);
-      if (res.code === 0) {
-        setUserList(res.data.userList || []);
-        setMsg(`Total ${res.data.count || 0} users under Device ${sn}`);
-      } else {
-        setMsg(`Query failed: ${res.msg} (Error Code ${res.code})`);
-      }
+        if (res.code === 0) {
+          setUserList(res.data.users || []);
+          setMsg(`Total ${res.data.total || 0} users under Device ${sn}`);
+        } else {
+          setMsg(`Query failed: ${res.msg} (Error Code ${res.code})`);
+        }
     } catch (error) {
       setMsg('Network error: Please check the backend service');
     } finally {
@@ -89,6 +91,52 @@ const UserDeviceModal = ({ visible, sn, onClose }) => {
       title: `${userName} - ${type === 'left' ? 'Left Palm Image' : 'Right Palm Image'}`
     });
     setImageModalVisible(true);
+  };
+
+  const handleWiegandChange = async (userId, value) => {
+    console.log(userId,value);
+    
+    try {
+      await userUpdatePermission(userId, value);
+      const res = await getUsersByDeviceSn(sn);
+      if (res.code === 0) {
+        setUserList(res.data.users || []);
+        setMsg(`Total ${res.data.total || 0} users under Device ${sn}`);
+      } else {
+        setMsg(`Query failed: ${res.msg} (Error Code ${res.code})`);
+      }
+      
+      setMsg('Access control permission updated successfully');
+    } catch (error) {
+      console.error('Error updating wiegand flag:', error);
+      fetchUsers(currentSn);
+      setMsg('Failed to update access control permission');
+    }
+  };
+
+  const handleAdminAuthChange = async (userId, value) => {
+    try {
+      // Update local state first for immediate UI feedback
+      setUserList(prev =>
+        prev.map(user =>
+          user.user_id === userId
+            ? { ...user, admin_auth: value }
+            : user
+        )
+      );
+
+      // Call API to update the value on the server
+      await updateUserAdminAuth(userId, value);
+      await getUsersByDeviceSn(sn)
+
+      // Optional: Show success message
+      setMsg('Administrator permission updated successfully');
+    } catch (error) {
+      console.error('Error updating admin auth:', error);
+      // Revert UI on error
+      fetchUsers(currentSn);
+      setMsg('Failed to update administrator permission');
+    }
   };
 
   if (!visible) return null;
@@ -159,10 +207,50 @@ const UserDeviceModal = ({ visible, sn, onClose }) => {
                   <td style={{ padding: '10px', borderBottom: '1px solid #eee' }}>{user.user_id}</td>
                   <td style={{ padding: '10px', borderBottom: '1px solid #eee' }}>{user.name}</td>
                   <td style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
-                    {user.wiegand_flag === 1 ? <span style={{ color: 'green' }}>Yes</span> : <span style={{ color: '#999' }}>No</span>}
+                    <Select
+                      value={user.wiegand_flag}
+                      onChange={(e) => handleWiegandChange(user.id, e.target.value)}
+                      size="small"
+                      sx={{
+                        '& .MuiSelect-select': {
+                          padding: '4px 8px',
+                          fontSize: '14px',
+                          color: user.wiegand_flag === 1 ? 'green' : '#999'
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          border: 'none'
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          border: '1px solid #ddd'
+                        }
+                      }}
+                    >
+                      <MenuItem value={1} sx={{ color: 'green' }}>Yes</MenuItem>
+                      <MenuItem value={0} sx={{ color: '#999' }}>No</MenuItem>
+                    </Select>
                   </td>
                   <td style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
-                    {user.admin_auth === 1 ? <span style={{ color: 'green' }}>Yes</span> : <span style={{ color: '#999' }}>No</span>}
+                    <Select
+                      value={user.admin_auth}
+                      onChange={(e) => handleAdminAuthChange(user.user_id, e.target.value)}
+                      size="small"
+                      sx={{
+                        '& .MuiSelect-select': {
+                          padding: '4px 8px',
+                          fontSize: '14px',
+                          color: user.admin_auth === 1 ? 'green' : '#999'
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          border: 'none'
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          border: '1px solid #ddd'
+                        }
+                      }}
+                    >
+                      <MenuItem value={1} sx={{ color: 'green' }}>Yes</MenuItem>
+                      <MenuItem value={0} sx={{ color: '#999' }}>No</MenuItem>
+                    </Select>
                   </td>
                   <td style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
                     <button

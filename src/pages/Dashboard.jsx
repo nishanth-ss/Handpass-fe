@@ -72,7 +72,7 @@ const Dashboard = () => {
     { key: 'imageQuery', label: 'User Image', icon: '🖼️' },
     { key: 'group', label: 'Group Management', icon: '👥' },
     { key: 'member', label: 'Member Management', icon: '👤' },
-    { key: 'rules', label: 'Rules Management', icon: '👤' },
+    { key: 'rules', label: 'Rules Management', icon: '📜' },
     { key: 'passRecord', label: 'Pass Record', icon: '📊' },
     { key: 'device', label: 'Device Management', icon: '📱' },
     { key: 'firmware', label: 'Firmware Check', icon: '🔄' }
