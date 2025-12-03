@@ -2,11 +2,11 @@ import axios from 'axios';
 import { API_BASE_URL } from './config';
 
 const handpassApi = axios.create({
-  baseURL: API_BASE_URL, 
+  baseURL: import.meta.env.VITE_BASE_URL,
+  timeout: 10000, // 10 seconds timeout
   headers: {
-    'Content-Type': 'application/json;charset=UTF-8'
+    'Content-Type': 'application/json',
   },
-  timeout: 5000 // Request timeout (5 seconds)
 });
 
 // Original axios instance configuration (retained for reference, no modification needed)
@@ -18,6 +18,16 @@ const handpassApi = axios.create({
 //   },
 //   timeout: 5000
 // });
+
+handpassApi.interceptors.request.use(
+  config => {
+    config.timeout = config.timeout || 10000; // Default 10s timeout
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  }
+);
 
 // Request interceptor: attach auth token to every request (except login, which uses a different axios instance)
 handpassApi.interceptors.request.use(
@@ -48,7 +58,7 @@ export const connectTest = (sn) => {
 
 // 2. User Registration (Document 2.2) - Original code, no modification needed
 export const registerUser = (userData) => {
-  return handpassApi.post('/add', userData); // Document 2.2 API path: /v1/add
+  return handpassApi.post('/v1/add', userData); // Document 2.2 API path: /v1/add
 };
 
 // 3. User Deletion (Document 2.3) - Original code, no modification needed
@@ -63,7 +73,7 @@ export const queryAllUsers = (sn) => {
 
 // 5. Check if ID is Registered (Document 2.5) - Original code, no modification needed
 export const checkRegistration = (sn, id) => {
-  return handpassApi.post('/check_registration', { sn, id }); // Document 2.5 API path: /v1/check_registration
+  return handpassApi.post('/v1/check_registration', { sn, id }); // Document 2.5 API path: /v1/check_registration
 };
 
 // 6. Query User Images (Document 2.6) - Original code, no modification needed
@@ -117,18 +127,22 @@ export const getAllDevices = () => {
 
 // 2. Update device status (e.g., called during connection test)
 export const updateDeviceStatus = (data) => {
-  return handpassApi.post('/device/updateStatus', data); // API path: /v1/device/updateStatus
+  return handpassApi.post('/v1/device/updateStatus', data); // API path: /v1/device/updateStatus
 };
 
 // 3. Query users by device serial number (sn)
 export const getUsersByDeviceSn = (sn) => {
-  return handpassApi.post('/device/getUsers', { sn }); // API path: /v1/device/getUsers
+  return handpassApi.post('/v1/device/getUsers', { sn }); // API path: /v1/device/getUsers
 };
 
 // 4. Query access records by device serial number (sn)
 export const getPassRecordsByDeviceSn = (sn) => {
-  return handpassApi.post('/device/getPassRecords', { sn }); // API path: /v1/device/getPassRecords
+  return handpassApi.post('/v1/device/getPassRecords', { sn }); // API path: /v1/device/getPassRecords
 };
+
+export const userUpdatePermission = (id,value)=>{
+  return handpassApi.put(`/api/users/update-permission/${id}`,{"wiegand_flag":value})
+}
 //------------
 
 export default handpassApi;

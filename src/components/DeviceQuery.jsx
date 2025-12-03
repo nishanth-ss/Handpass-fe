@@ -1,8 +1,8 @@
 // frontend/src/components/DeviceQuery.js
 import { useState, useEffect } from 'react';
 import { getAllDevices, getUsersByDeviceSn, getPassRecordsByDeviceSn } from '../api/handpassApi';
-import UserDeviceModal from './UserDeviceModal';  
-import PassRecordModal from './PassRecordModal'; 
+import UserDeviceModal from './UserDeviceModal';
+import PassRecordModal from './PassRecordModal';
 
 // Connection status tag style (visually distinguish online/offline)
 const OnlineStatusTag = ({ status }) => {
@@ -28,25 +28,124 @@ const DeviceQuery = () => {
   const [userModalVisible, setUserModalVisible] = useState(false);
   const [passModalVisible, setPassModalVisible] = useState(false);
   const [currentSn, setCurrentSn] = useState(''); // Current device serial number (sn) for operations
+  const [pollingInterval, setPollingInterval] = useState(null);
 
   // Fetch all devices when page loads
-  useEffect(() => {
-    fetchAllDevices();
-  }, []);
+  // Add this state at the top of your component
 
-  // Fetch all devices
-  const fetchAllDevices = async () => {
-    setLoading(true);
+  // Update your useEffect hook
+// Remove the pollingInterval state as we don't need it
+// const [pollingInterval, setPollingInterval] = useState(null);
+
+useEffect(() => {
+  const controller = new AbortController();
+  let timeoutId = null;
+  let intervalId = null;
+  let isMounted = true;
+
+  const fetchData = async () => {
+    if (!isMounted) return;
+    
     try {
-      const res = await getAllDevices();
-      if (res.code === 0) {
-        setDeviceList(res.data.deviceList || []);
-        setMsg(`Total ${res.data.deviceList?.length || 0} devices found`);
-      } else {
-        setMsg(`Query failed: ${res.msg} (Error Code ${res.code})`);
+      setLoading(true);
+
+      // Timeout safety: abort request after 8 seconds
+      timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const res = await getAllDevices({ signal: controller.signal });
+
+      if (!isMounted) return;
+
+      if (res?.data) {
+        const devices = res.data.data || res.data;
+        const total = res.data.pagination?.total || (Array.isArray(devices) ? devices.length : 0);
+
+        setDeviceList(Array.isArray(devices) ? devices : []);
+        setMsg(`Total ${total} devices found (Last updated: ${new Date().toLocaleTimeString()})`);
       }
     } catch (error) {
-      setMsg('Network error: Please check the backend service');
+      if (isMounted && error.name !== 'AbortError') {
+        console.error("API Error:", error);
+        setMsg(`Error: ${error.message || "Failed to fetch devices"}`);
+      }
+    } finally {
+      if (isMounted) {
+        clearTimeout(timeoutId);
+        setLoading(false);
+      }
+    }
+  };
+
+  // Initial fetch
+  fetchData();
+
+  // Poll every 60 seconds
+  intervalId = setInterval(() => {
+    fetchData();
+  }, 60000);
+
+  // Cleanup
+  return () => {
+    isMounted = false;
+    clearInterval(intervalId);
+    clearTimeout(timeoutId);
+    controller.abort();
+  };
+}, []);
+ // Empty dependency array means this runs once on mount and cleanup on unmount
+
+// Remove the second useEffect as it's no longer needed
+
+  // Add cleanup for interval when component unmounts
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
+
+  // Fetch all devices
+  const fetchAllDevices = async (retryCount = 0) => {
+    const MAX_RETRIES = 2;
+    const RETRY_DELAY = 1000;
+
+    try {
+      setLoading(true);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      try {
+        const res = await getAllDevices({ signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        // Check if response has data property
+        if (res && res.data) {
+          // Handle both response formats
+          const devices = res.data.data || res.data;
+          const total = res.data.pagination?.total || (Array.isArray(devices) ? devices.length : 0);
+
+          setDeviceList(Array.isArray(devices) ? devices : []);
+          setMsg(`Total ${total} devices found`);
+        } else {
+          throw new Error('Invalid response format from server');
+        }
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+      }
+    } catch (error) {
+      console.error('API Error:', error);
+
+      if (error.name === 'AbortError') {
+        setMsg('Request timed out. The server is taking too long to respond.');
+      } else if (retryCount < MAX_RETRIES) {
+        const delay = RETRY_DELAY * Math.pow(2, retryCount);
+        setTimeout(() => fetchAllDevices(retryCount + 1), delay);
+        setMsg(`Attempt ${retryCount + 1} failed. Retrying in ${delay / 1000} seconds...`);
+      } else {
+        setMsg(`Failed to load devices: ${error.message || 'Unknown error'}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -112,16 +211,56 @@ const DeviceQuery = () => {
           </thead>
           <tbody>
             {deviceList.map((device, index) => (
-              <tr key={device.sn} style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#fafafa' }}>
-                <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>{device.sn}</td>
-                <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>{device.device_name || 'Not set'}</td>
-                <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>{device.device_ip || 'Unknown'}</td>
-                <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>{device.firmware_version}</td>
-                <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
-                  {device.last_connect_time ? new Date(device.last_connect_time).toLocaleString() : 'Not connected'}
+              <tr
+                key={device.id}
+                style={{
+                  backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9',
+                  borderBottom: '1px solid #eee',
+                  transition: 'background-color 0.2s',
+                  ':hover': {
+                    backgroundColor: '#f0f7ff'
+                  }
+                }}
+              >
+                <td style={{
+                  padding: '14px 16px',
+                  color: '#2c3e50',
+                  fontWeight: 500
+                }}>{device.sn}</td>
+                <td style={{
+                  padding: '14px 16px',
+                  color: '#2c3e50'
+                }}>{device.device_name || '-'}</td>
+                <td style={{
+                  padding: '14px 16px',
+                  color: '#2c3e50',
+                  fontFamily: 'monospace'
+                }}>{device.device_ip}</td>
+                <td style={{
+                  padding: '14px 16px',
+                  color: '#2c3e50'
+                }}>v{device.firmware_version}</td>
+                <td style={{
+                  padding: '14px 16px',
+                  color: '#2c3e50'
+                }}>
+                  {device.last_connect_time ?
+                    new Date(device.last_connect_time).toLocaleString() :
+                    <span style={{ color: '#95a5a6' }}>Never</span>
+                  }
                 </td>
-                <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
-                  <OnlineStatusTag status={device.online_status} />
+                <td style={{ padding: '14px 16px' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    backgroundColor: device.online_status === 1 ? '#e3f9e5' : '#ffebee',
+                    color: device.online_status === 1 ? '#1b5e20' : '#c62828',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}>
+                    {device.online_status === 1 ? 'Online' : 'Offline'}
+                  </span>
                 </td>
                 <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>
                   <button
