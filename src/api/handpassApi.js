@@ -43,7 +43,7 @@ handpassApi.interceptors.response.use(
 
 // 1. Connection Test (Document 2.1) - Original code, no modification needed
 export const connectTest = (sn) => {
-  return handpassApi.post('/connect', { sn }); // Document 2.1 API path: /v1/connect
+  return handpassApi.post('/v1/connect', { sn }); // Document 2.1 API path: /v1/connect
 };
 
 // 2. User Registration (Document 2.2) - Original code, no modification needed
@@ -112,7 +112,7 @@ export const queryBatchImportPath = (sn) => {
 // Newly added APIs for Device Management (frontend/src/api/handpassApi.js)
 // 1. Query all devices
 export const getAllDevices = () => {
-  return handpassApi.post('/device/getAll'); // API path: /v1/device/getAll
+  return handpassApi.post('/v1/device/getAll'); // API path: /v1/device/getAll
 };
 
 // 2. Update device status (e.g., called during connection test)

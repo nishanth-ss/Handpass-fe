@@ -10,6 +10,7 @@ import FirmwareCheck from '../components/FirmwareCheck';
 import DeviceQuery from '../components/DeviceQuery';
 import GroupManagement from '../components/GroupManagement';
 import MemberManagement from '../components/MemberManagement';
+import RulesManagement from '../components/RulesManagement';
 
 
 const GlobalStyles = () => (
@@ -71,6 +72,7 @@ const Dashboard = () => {
     { key: 'imageQuery', label: 'User Image', icon: '🖼️' },
     { key: 'group', label: 'Group Management', icon: '👥' },
     { key: 'member', label: 'Member Management', icon: '👤' },
+    { key: 'rules', label: 'Rules Management', icon: '👤' },
     { key: 'passRecord', label: 'Pass Record', icon: '📊' },
     { key: 'device', label: 'Device Management', icon: '📱' },
     { key: 'firmware', label: 'Firmware Check', icon: '🔄' }
@@ -212,6 +214,7 @@ const Dashboard = () => {
             {activeTab === 'passRecord' && <PassRecord />}
             {activeTab === 'group' && <GroupManagement />}
             {activeTab === 'member' && <MemberManagement />}
+            {activeTab === 'rules' && <RulesManagement />}
             {activeTab === 'device' && <DeviceQuery />}
             {activeTab === 'firmware' && <FirmwareCheck />}
           </div>

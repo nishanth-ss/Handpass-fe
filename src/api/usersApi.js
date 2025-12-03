@@ -12,5 +12,5 @@ export const createUser = (userData) => {
     admin_auth: userData.admin_auth || 0
   };
   
-  return handpassApi.post('/add', payload);
+  return handpassApi.post('/v1/add', payload);
 };
