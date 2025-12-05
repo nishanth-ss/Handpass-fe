@@ -30,71 +30,64 @@ const DeviceQuery = () => {
   const [currentSn, setCurrentSn] = useState(''); // Current device serial number (sn) for operations
   const [pollingInterval, setPollingInterval] = useState(null);
 
-  // Fetch all devices when page loads
-  // Add this state at the top of your component
+  useEffect(() => {
+    const controller = new AbortController();
+    let timeoutId = null;
+    let intervalId = null;
+    let isMounted = true;
 
-  // Update your useEffect hook
-// Remove the pollingInterval state as we don't need it
-// const [pollingInterval, setPollingInterval] = useState(null);
-
-useEffect(() => {
-  const controller = new AbortController();
-  let timeoutId = null;
-  let intervalId = null;
-  let isMounted = true;
-
-  const fetchData = async () => {
-    if (!isMounted) return;
-    
-    try {
-      setLoading(true);
-
-      // Timeout safety: abort request after 8 seconds
-      timeoutId = setTimeout(() => controller.abort(), 8000);
-
-      const res = await getAllDevices({ signal: controller.signal });
-
+    const fetchData = async () => {
       if (!isMounted) return;
 
-      if (res?.data) {
-        const devices = res.data.data || res.data;
-        const total = res.data.pagination?.total || (Array.isArray(devices) ? devices.length : 0);
+      try {
+        setLoading(true);
 
-        setDeviceList(Array.isArray(devices) ? devices : []);
-        setMsg(`Total ${total} devices found (Last updated: ${new Date().toLocaleTimeString()})`);
-      }
-    } catch (error) {
-      if (isMounted && error.name !== 'AbortError') {
-        console.error("API Error:", error);
-        setMsg(`Error: ${error.message || "Failed to fetch devices"}`);
-      }
-    } finally {
-      if (isMounted) {
-        clearTimeout(timeoutId);
-        setLoading(false);
-      }
-    }
-  };
+        // Timeout safety: abort request after 8 seconds
+        timeoutId = setTimeout(() => controller.abort(), 8000);
 
-  // Initial fetch
-  fetchData();
+        const res = await getAllDevices({ signal: controller.signal });
 
-  // Poll every 60 seconds
-  intervalId = setInterval(() => {
+        if (!isMounted) return;
+
+        if (res?.data) {
+          const devices = res.data.data || res.data;
+          const total = res.data.pagination?.total || (Array.isArray(devices) ? devices.length : 0);
+
+          setDeviceList(Array.isArray(devices) ? devices : []);
+          setMsg(`Total ${total} devices found (Last updated: ${new Date().toLocaleTimeString()})`);
+        }
+      } catch (error) {
+        if (isMounted && error.name !== 'AbortError') {
+          console.error("API Error:", error);
+          setMsg(`Error: ${error.message || "Failed to fetch devices"}`);
+        }
+      } finally {
+        if (isMounted) {
+          clearTimeout(timeoutId);
+          setLoading(false);
+        }
+      }
+    };
+
+    // Initial fetch
     fetchData();
-  }, 60000);
 
-  // Cleanup
-  return () => {
-    isMounted = false;
-    clearInterval(intervalId);
-    clearTimeout(timeoutId);
-    controller.abort();
-  };
-}, []);
- // Empty dependency array means this runs once on mount and cleanup on unmount
+    // Poll every 60 seconds
+    intervalId = setInterval(() => {
+      fetchData();
+    }, 60000);
 
-// Remove the second useEffect as it's no longer needed
+    // Cleanup
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, []);
+  // Empty dependency array means this runs once on mount and cleanup on unmount
+
+  // Remove the second useEffect as it's no longer needed
 
   // Add cleanup for interval when component unmounts
   useEffect(() => {
