@@ -138,11 +138,6 @@ const MemberManagement = () => {
             headerName: 'Group Name',
             flex: 1,
             minWidth: 200,
-            // valueGetter: (params) => {
-            //     if (!groups || !params.row) return 'Loading...';
-            //     const group = groups.find(g => g && g.id === params.row.group_id);
-            //     return group ? group.group_name : 'N/A';
-            // }
         },
         {
             field: 'user_name',

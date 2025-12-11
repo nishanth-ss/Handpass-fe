@@ -14,3 +14,7 @@ export const createUser = (userData) => {
   
   return handpassApi.post('/v1/add', payload);
 };
+
+export const getAllUsers = () => {
+  return handpassApi.get('/api/users');
+}

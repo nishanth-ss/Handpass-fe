@@ -49,3 +49,8 @@ export const updateGroupMember = (memberId, memberData) => {
 export const removeGroupMember = (memberId) => {
   return handpassApi.delete(`/api/group/members/${memberId}`);
 };
+
+
+export const getSpecifiGroupMembers = (groupId) => {
+  return handpassApi.get(`/api/group/group-members/${groupId}`);
+}

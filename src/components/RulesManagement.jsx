@@ -379,137 +379,125 @@ const RulesManagement = ({ groupId, groupName }) => {
                 </DialogTitle>
                 <form onSubmit={handleSubmit}>
                     <DialogContent dividers>
-                        <Grid container spacing={2}>
-                            <Grid item xs={12}>
-                                <TextField
-                                    fullWidth
-                                    label="Rule Name"
-                                    name="rule_name"
-                                    value={formData.rule_name}
-                                    onChange={handleInputChange}
-                                    required
-                                    margin="normal"
-                                    variant="outlined"
-                                    size="small"
-                                />
-                            </Grid>
+                        <div style={{display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr'}}>
+                            <TextField
+                                fullWidth
+                                label="Rule Name"
+                                name="rule_name"
+                                value={formData.rule_name}
+                                onChange={handleInputChange}
+                                required
+                                margin="normal"
+                                variant="outlined"
+                                size="small"
+                            />
 
-                            <Grid item xs={12}>
-                                <Autocomplete
-                                    options={groups}
-                                    getOptionLabel={(option) => option.group_name}
-                                    value={selectedGroup}
-                                    onChange={(_, newValue) => {
-                                        setSelectedGroup(newValue);
-                                    }}
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
-                                            label="Select Group"
-                                            required
-                                            margin="normal"
-                                            variant="outlined"
-                                            size="small"
-                                            fullWidth
-                                        />
-                                    )}
-                                    loading={loadingGroups}
-                                    disabled={!!groupId} // Changed from initialGroupId to groupId
-                                />
-                            </Grid>
-
-                            <Grid item xs={12}>
-                                <FormControl fullWidth margin="normal" size="small">
-                                    <InputLabel id="days-label">Days *</InputLabel>
-                                    <Select
-                                        labelId="days-label"
-                                        id="days"
-                                        multiple
-                                        value={formData.days}
-                                        onChange={handleDaysChange}
-                                        label="Days"
+                            <Autocomplete
+                                options={groups}
+                                getOptionLabel={(option) => option.group_name}
+                                value={selectedGroup}
+                                onChange={(_, newValue) => {
+                                    setSelectedGroup(newValue);
+                                }}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Select Group"
                                         required
-                                        renderValue={(selected) => (
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                {selected.map((value) => (
-                                                    <span key={value} style={{
-                                                        backgroundColor: '#e0e0e0',
-                                                        borderRadius: '4px',
-                                                        padding: '2px 6px',
-                                                        fontSize: '0.75rem'
-                                                    }}>
-                                                        {value}
-                                                    </span>
-                                                ))}
-                                            </Box>
-                                        )}
-                                    >
-                                        {days.map((day) => (
-                                            <MenuItem key={day.value} value={day.value}>
-                                                <Checkbox checked={formData.days.indexOf(day.value) > -1} />
-                                                {day.label}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
+                                        margin="normal"
+                                        variant="outlined"
+                                        size="small"
+                                        fullWidth
+                                    />
+                                )}
+                                loading={loadingGroups}
+                                disabled={!!groupId} // Changed from initialGroupId to groupId
+                            />
 
-                            <Grid item xs={6}>
-                                <TextField
-                                    fullWidth
-                                    label="Start Time"
-                                    type="time"
-                                    name="start_time"
-                                    value={formData.start_time}
-                                    onChange={handleInputChange}
+                            <FormControl fullWidth margin="normal" size="small">
+                                <InputLabel id="days-label">Days *</InputLabel>
+                                <Select
+                                    labelId="days-label"
+                                    id="days"
+                                    multiple
+                                    value={formData.days}
+                                    onChange={handleDaysChange}
+                                    label="Days"
                                     required
-                                    margin="normal"
-                                    variant="outlined"
-                                    size="small"
-                                    InputLabelProps={{
-                                        shrink: true,
-                                    }}
-                                    inputProps={{
-                                        step: 300, // 5 min
-                                    }}
-                                />
-                            </Grid>
+                                    renderValue={(selected) => (
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                            {selected.map((value) => (
+                                                <span key={value} style={{
+                                                    backgroundColor: '#e0e0e0',
+                                                    borderRadius: '4px',
+                                                    padding: '2px 6px',
+                                                    fontSize: '0.75rem'
+                                                }}>
+                                                    {value}
+                                                </span>
+                                            ))}
+                                        </Box>
+                                    )}
+                                >
+                                    {days.map((day) => (
+                                        <MenuItem key={day.value} value={day.value}>
+                                            <Checkbox checked={formData.days.indexOf(day.value) > -1} />
+                                            {day.label}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
 
-                            <Grid item xs={6}>
-                                <TextField
-                                    fullWidth
-                                    label="End Time"
-                                    type="time"
-                                    name="end_time"
-                                    value={formData.end_time}
-                                    onChange={handleInputChange}
-                                    required
-                                    margin="normal"
-                                    variant="outlined"
-                                    size="small"
-                                    InputLabelProps={{
-                                        shrink: true,
-                                    }}
-                                    inputProps={{
-                                        step: 300, // 5 min
-                                    }}
-                                />
-                            </Grid>
+                            <TextField
+                                fullWidth
+                                label="Start Time"
+                                type="time"
+                                name="start_time"
+                                value={formData.start_time}
+                                onChange={handleInputChange}
+                                required
+                                margin="normal"
+                                variant="outlined"
+                                size="small"
+                                InputLabelProps={{
+                                    shrink: true,
+                                }}
+                                inputProps={{
+                                    step: 300, // 5 min
+                                }}
+                            />
 
-                            <Grid item xs={12}>
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox
-                                            checked={formData.allow_cross_midnight}
-                                            onChange={handleInputChange}
-                                            name="allow_cross_midnight"
-                                            color="primary"
-                                        />
-                                    }
-                                    label="Allow cross midnight"
-                                />
-                            </Grid>
-                        </Grid>
+                            <TextField
+                                fullWidth
+                                label="End Time"
+                                type="time"
+                                name="end_time"
+                                value={formData.end_time}
+                                onChange={handleInputChange}
+                                required
+                                margin="normal"
+                                variant="outlined"
+                                size="small"
+                                InputLabelProps={{
+                                    shrink: true,
+                                }}
+                                inputProps={{
+                                    step: 300, // 5 min
+                                }}
+                            />
+
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={formData.allow_cross_midnight}
+                                        onChange={handleInputChange}
+                                        name="allow_cross_midnight"
+                                        color="primary"
+                                    />
+                                }
+                                label="Allow cross midnight"
+                            />
+                        </div>
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleClose} color="primary">
