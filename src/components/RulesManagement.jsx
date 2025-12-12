@@ -318,8 +318,8 @@ const RulesManagement = ({ groupId, groupName }) => {
     };
 
     return (
-        <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <>
+            <Box display="flex" justifyContent="space-between" alignItems="center" my={3}>
                 <Typography variant="h5" component="h2">
                     Rules for {groupName}
                 </Typography>
@@ -341,16 +341,26 @@ const RulesManagement = ({ groupId, groupName }) => {
                     pageSize={10}
                     rowsPerPageOptions={[5, 10, 25, 50]}
                     loading={loading}
-                    disableSelectionOnClick
                     components={{
                         Toolbar: GridToolbar,
                     }}
+                    disableRowSelectionOnClick
+                    disableSelectionOnClick
                     sx={{
                         '& .MuiDataGrid-cell:focus': {
                             outline: 'none',
                         },
                         '& .MuiDataGrid-columnHeader:focus': {
                             outline: 'none',
+                        },
+                        '& .MuiDataGrid-cell:focus-within': {
+                            outline: 'none',
+                        },
+                        '& .MuiDataGrid-row.Mui-selected': {
+                            backgroundColor: 'inherit !important',
+                        },
+                        '& .MuiDataGrid-row:hover': {
+                            backgroundColor: 'rgba(0,0,0,0.02)', // optional hover style
                         },
                     }}
                 />
@@ -379,7 +389,7 @@ const RulesManagement = ({ groupId, groupName }) => {
                 </DialogTitle>
                 <form onSubmit={handleSubmit}>
                     <DialogContent dividers>
-                        <div style={{display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr'}}>
+                        <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' }}>
                             <TextField
                                 fullWidth
                                 label="Rule Name"
@@ -530,7 +540,7 @@ const RulesManagement = ({ groupId, groupName }) => {
                     {snackbar.message}
                 </Alert>
             </Snackbar>
-        </Paper>
+        </>
     );
 };
 
