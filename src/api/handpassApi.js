@@ -3,7 +3,7 @@ import { API_BASE_URL } from './config';
 
 const handpassApi = axios.create({
   baseURL: import.meta.env.VITE_BASE_URL,
-  timeout: 10000, // 10 seconds timeout
+  timeout: 30000, // 10 seconds timeout
   headers: {
     'Content-Type': 'application/json',
   },
@@ -143,6 +143,10 @@ export const getPassRecordsByDeviceSn = (sn) => {
 export const userUpdatePermission = (id,value)=>{
   return handpassApi.put(`/api/users/update-permission/${id}`,{"wiegand_flag":value})
 }
+
+export const getReports = (payload) => {
+  return handpassApi.post('/api/report/access-list',payload); // API path: /v1/device/getAll
+};
 //------------
 
 export default handpassApi;

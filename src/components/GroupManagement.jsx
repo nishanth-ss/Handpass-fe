@@ -3,37 +3,27 @@ import { DataGrid } from '@mui/x-data-grid';
 import {
     Box,
     Button,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    TextField,
     IconButton,
-    Tooltip,
-    Autocomplete,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem
 } from '@mui/material';
 
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import RefreshIcon from '@mui/icons-material/Refresh';
 
 import { useNotification } from '../contexts/NotificationContext';
 import {
     getGroups,
     createGroup,
     updateGroup,
-    deleteGroup
 } from '../api/groupApi';
 import { getAllDevices } from '../api/handpassApi';
-import { addGroupMember, getGroupMembers, getSpecifiGroupMembers, removeGroupMember, updateGroupMember } from '../api/memberApi';
+import { addGroupMember, getSpecifiGroupMembers, removeGroupMember, updateGroupMember } from '../api/memberApi';
 
-import { useForm, Controller, set } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
+import { FaArrowLeftLong } from "react-icons/fa6";
 import { getAllUsers } from '../api/usersApi';
+import MemberManagementModal from './innerComponents/groupmanagement/MemberManagementModal';
+import GroupManagementModal from './innerComponents/groupmanagement/GroupManagementModal';
 
 const GroupManagement = () => {
 
@@ -83,7 +73,7 @@ const GroupManagement = () => {
         control: controlMember,
     } = useForm({
         defaultValues: {
-            group_id: "",
+            // group_id: "",
             user_id: "",
             is_allowed: true
         }
@@ -96,27 +86,59 @@ const GroupManagement = () => {
         try {
             const res = await getGroups();
             setGroups(res.data || []);
-        } catch {
-            showNotification("Failed to load groups", "error");
+        } catch (error) {
+            console.error('Error fetching groups:', error);
+            const errorMessage = error.response?.data?.message || 'Failed to load groups';
+            showNotification(errorMessage, "error");
+
+            // If unauthorized, redirect to login
+            if (error.response?.status === 401) {
+                // The interceptor should handle this, but just in case
+                // localStorage.removeItem('authToken');
+                // window.location.href = '/login';
+            }
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const fetchMembers = async (groupID) => {
         try {
             const res = await getSpecifiGroupMembers(groupID);
             setMembers(res.data || []);
-        } catch {
-            showNotification("Failed to load members", "error");
+        } catch (error) {
+            console.error('Error fetching members:', error);
+            const errorMessage = error.response?.data?.message || 'Failed to load group members';
+            showNotification(errorMessage, "error");
+
+            // If unauthorized, redirect to login
+            if (error.response?.status === 401) {
+                localStorage.removeItem('authToken');
+                window.location.href = '/login';
+            }
+
+            // Return empty array to prevent undefined errors
+            return [];
         }
     };
 
     const fetchDevices = async () => {
         try {
             const res = await getAllDevices();
-            setDevices(res.data);
-        } catch {
-            showNotification("Failed to load devices", "error");
+            setDevices(res.data || []);
+        } catch (error) {
+            console.error('Error fetching devices:', error);
+            const errorMessage = error.response?.data?.message || 'Failed to load devices';
+            showNotification(errorMessage, "error");
+
+            // If unauthorized, redirect to login
+            if (error.response?.status === 401) {
+                localStorage.removeItem('authToken');
+                window.location.href = '/login';
+            }
+
+            // Return empty array to prevent undefined errors
+            return [];
         }
     };
 
@@ -125,7 +147,15 @@ const GroupManagement = () => {
             const res = await getAllUsers();
             setGetAllUserData(res.data);
         } catch (error) {
-            console.log(error);
+            console.error('Error fetching users:', error);
+            const errorMessage = error.response?.data?.message || 'Failed to load users';
+            showNotification(errorMessage, "error");
+
+            // If unauthorized, redirect to login
+            if (error.response?.status === 401) {
+                localStorage.removeItem('authToken');
+                window.location.href = '/login';
+            }
         }
     }
 
@@ -186,7 +216,7 @@ const GroupManagement = () => {
 
     const openAddGroupMember = () => {
         resetMember({
-            group_id: "",
+            // group_id: "",
             user_id: "",
             is_allowed: true
         });
@@ -195,11 +225,9 @@ const GroupManagement = () => {
     }
 
     const openEditMember = (member) => {
-        console.log(member);
-
         setEditingMember(member);
         resetMember({
-            group_id: String(member.group_id),
+            // group_id: String(member.group_id),
             user_id: String(member.user_id),
             is_allowed: member.is_allowed ? "true" : "false"
         });
@@ -209,10 +237,10 @@ const GroupManagement = () => {
     const handleMemberSubmit = async (data) => {
         try {
             if (editingMember) {
-                await updateGroupMember(editingMember.id, data);
+                await updateGroupMember(editingMember.id, { ...data, group_id: getGroupID });
                 showNotification('Member updated successfully', 'success');
             } else {
-                await addGroupMember(data);
+                await addGroupMember({ ...data, group_id: getGroupID });
                 showNotification('Member added successfully', 'success');
             }
             setMemberDialog(false);
@@ -222,6 +250,19 @@ const GroupManagement = () => {
             showNotification(`Failed to ${editingMember ? 'update' : 'add'} member`, 'error');
         }
     };
+
+    // const updateWiegandFlag = async (row, value) => {
+
+    //     try {
+    //         await updateGroupMember(row?.id, { wiegand_flag: value, group_id: row?.group_id, user_id: row?.user_id });
+    //         fetchMembers(getGroupID);
+    //         showNotification("Permission updated", "success");
+    //     } catch (e) {
+    //         console.error("Update failed", e);
+    //         showNotification("Failed to update permission", "error");
+    //     }
+    // };
+
 
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to remove this member from the group?')) {
@@ -246,13 +287,10 @@ const GroupManagement = () => {
             headerName: "Group Name",
             flex: 1,
             renderCell: (params) => {
-                const sn = params.row.devices?.[0]?.sn || "";
+                const sn = params.row.devices?.[0]?.sn || "No SN";
                 return (
-                    <div>
-                        <strong>{params.value}</strong>
-                        <div style={{ fontSize: 12, color: "#666" }}>
-                            {sn && `( ${sn} )`}
-                        </div>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span>{params.value} - <strong>{sn}</strong></span>
                     </div>
                 );
             }
@@ -281,7 +319,15 @@ const GroupManagement = () => {
     ];
 
     const memberColumns = [
-        { field: "group_name", headerName: "Group", flex: 1 },
+        { field: "group_name", headerName: "Group", flex: 1, renderCell: (params)=>{
+            console.log(params);
+            
+            return (
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                    <span>{params.value}</span>
+                </div>
+            )
+        } },
         { field: "name", headerName: "User", flex: 1 },
         {
             field: "is_allowed", headerName: "Status", flex: 1,
@@ -293,6 +339,68 @@ const GroupManagement = () => {
                 )
             )
         },
+        // {
+        //     field: "wiegand_flag",
+        //     headerName: "Access Control Permission",
+        //     flex:1,
+        //     renderCell: (params) => {
+        //         return (
+        //             <Select
+        //                 value={params.value}
+        //                 onChange={(e) => {
+        //                     const newValue = e.target.value;
+        //                     updateWiegandFlag(params.row, newValue); 
+        //                 }}
+        //                 size="small"
+        //                 sx={{
+        //                     "& .MuiSelect-select": {
+        //                         padding: "4px 8px",
+        //                         fontSize: "14px",
+        //                         color: params.value === 1 ? "green" : "#999",
+        //                     },
+        //                     "& .MuiOutlinedInput-notchedOutline": {
+        //                         border: "none",
+        //                     },
+        //                     "&:hover .MuiOutlinedInput-notchedOutline": {
+        //                         border: "1px solid #ddd",
+        //                     },
+        //                 }}
+        //             >
+        //                 <MenuItem value={1} sx={{ color: "green" }}>Yes</MenuItem>
+        //                 <MenuItem value={0} sx={{ color: "#999" }}>No</MenuItem>
+        //             </Select>
+        //         );
+        //     },
+        // },
+        // {
+        //     field: "admin_auth", headerName: "Admin Permission",
+        //     flex:1,
+        //     renderCell: (params) => {
+        //         return (
+        //             <Select
+        //                 value={params.value}
+        //                 onChange={(e) => handleWiegandChange(params.row.id, e.target.value)}
+        //                 size="small"
+        //                 sx={{
+        //                     '& .MuiSelect-select': {
+        //                         padding: '4px 8px',
+        //                         fontSize: '14px',
+        //                         color: params.value === 1 ? 'green' : '#999'
+        //                     },
+        //                     '& .MuiOutlinedInput-notchedOutline': {
+        //                         border: 'none'
+        //                     },
+        //                     '&:hover .MuiOutlinedInput-notchedOutline': {
+        //                         border: '1px solid #ddd'
+        //                     }
+        //                 }}
+        //             >
+        //                 <MenuItem value={1} sx={{ color: 'green' }}>Yes</MenuItem>
+        //                 <MenuItem value={0} sx={{ color: '#999' }}>No</MenuItem>
+        //             </Select>
+        //         )
+        //     }
+        // },
         {
             field: "actions",
             headerName: "Actions",
@@ -337,7 +445,7 @@ const GroupManagement = () => {
 
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
                 {!showGroupTable && (
-                    <Button variant="outlined" onClick={() => setShowGroupTable(true)}>Back</Button>
+                    <Button variant="outlined" sx={{ display: "flex", gap: 1, alignItems: "center" }} onClick={() => setShowGroupTable(true)}><FaArrowLeftLong /> Back</Button>
                 )}
                 {/* <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchGroups}>
                     Refresh
@@ -348,162 +456,91 @@ const GroupManagement = () => {
             {/* ============ TABLES ============ */}
 
             {showGroupTable ? (
-                <DataGrid rows={groups} columns={groupColumns} getRowId={(r) => r.id} autoHeight />
-            ) : (
-                <DataGrid rows={members} columns={memberColumns} getRowId={(r) => r.id} autoHeight />
+                <DataGrid
+                    rows={groups}
+                    columns={groupColumns}
+                    getRowId={(r) => r.id}
+                    autoHeight
+                    disableRowSelectionOnClick
+                    disableSelectionOnClick
+                    sx={{
+                        '& .MuiDataGrid-cell:focus': {
+                            outline: 'none',
+                        },
+                        '& .MuiDataGrid-columnHeader:focus': {
+                            outline: 'none',
+                        },
+                        '& .MuiDataGrid-cell:focus-within': {
+                            outline: 'none',
+                        },
+                        '& .MuiDataGrid-row.Mui-selected': {
+                            backgroundColor: 'inherit !important',
+                        },
+                        '& .MuiDataGrid-row:hover': {
+                            backgroundColor: 'rgba(0,0,0,0.02)', // optional hover style
+                        },
+                    }}
+                />) : (
+                <DataGrid rows={members} columns={memberColumns} getRowId={(r) => r.id} autoHeight
+                    disableRowSelectionOnClick
+                    disableSelectionOnClick
+                    sx={{
+                        '& .MuiDataGrid-cell:focus': {
+                            outline: 'none',
+                        },
+                        '& .MuiDataGrid-columnHeader:focus': {
+                            outline: 'none',
+                        },
+                        '& .MuiDataGrid-cell:focus-within': {
+                            outline: 'none',
+                        },
+                        '& .MuiDataGrid-row.Mui-selected': {
+                            backgroundColor: 'inherit !important',
+                        },
+                        '& .MuiDataGrid-row:hover': {
+                            backgroundColor: 'rgba(0,0,0,0.02)', // optional hover style
+                        },
+                    }}
+                />
             )}
 
 
             {/* ======================================================
                      GROUP FORM DIALOG
             ====================================================== */}
-            <Dialog open={groupDialog} onClose={() => setGroupDialog(false)} maxWidth="sm" fullWidth>
-                <form onSubmit={handleSubmitGroup(saveGroup)}>
-                    <DialogTitle>{editingGroup ? "Edit Group" : "Add Group"}</DialogTitle>
+            <GroupManagementModal
+                open={groupDialog}
+                onClose={() => setGroupDialog(false)}
+                editingGroup={editingGroup}
+                devices={devices}
+                controlGroup={controlGroup}
+                registerGroup={registerGroup}
+                groupErrors={groupErrors}
+                handleSubmitGroup={handleSubmitGroup}
+                saveGroup={saveGroup}
+            />
 
-                    <DialogContent>
-
-                        <TextField
-                            label="Group Name"
-                            {...registerGroup("group_name")}
-                            error={!!groupErrors.group_name}
-                            helperText={groupErrors.group_name?.message}
-                            fullWidth
-                            margin="dense"
-                        />
-
-                        {/* Device Select */}
-                        <Controller
-                            name="device_id"
-                            control={controlGroup}
-                            render={({ field }) => {
-                                const selected = devices.find(d => d.id === field.value) || null;
-
-                                return (
-                                    <Autocomplete
-                                        options={devices}
-                                        value={selected}
-                                        getOptionLabel={(opt) => opt.sn || ""}
-                                        isOptionEqualToValue={(a, b) => a.id === b?.id}
-                                        onChange={(e, val) => field.onChange(val?.id || "")}
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                label="Select Device"
-                                                fullWidth
-                                                margin="dense"
-                                            />
-                                        )}
-                                    />
-                                );
-                            }}
-                        />
-
-                        <TextField
-                            label="Description"
-                            {...registerGroup("description")}
-                            error={!!groupErrors.description}
-                            helperText={groupErrors.description?.message}
-                            fullWidth
-                            multiline
-                            rows={3}
-                            margin="dense"
-                        />
-                    </DialogContent>
-
-                    <DialogActions>
-                        <Button variant='outlined' onClick={() => setGroupDialog(false)}>Cancel</Button>
-                        <Button type="submit" variant="contained">Save</Button>
-                    </DialogActions>
-                </form>
-            </Dialog>
 
 
             {/* ======================================================
                      MEMBER FORM DIALOG
             ====================================================== */}
-            <Dialog open={memberDialog} onClose={() => { setMemberDialog(false); resetMember(); setEditingMember(null) }} maxWidth="sm" fullWidth>
-                <form onSubmit={handleSubmitMember(handleMemberSubmit)}>
-                    <DialogTitle>Edit Member</DialogTitle>
 
-                    <DialogContent>
-
-                        <Controller
-                            name="group_id"
-                            control={controlMember}
-                            render={({ field }) => {
-                                const selectedGroup =
-                                    groups.find((g) => g.id === field.value) || null;
-
-                                return (
-                                    <Autocomplete
-                                        options={groups}
-                                        value={selectedGroup}
-                                        getOptionLabel={(option) => option.group_name || ""}
-                                        isOptionEqualToValue={(a, b) => a.id === b?.id}
-                                        onChange={(event, value) => field.onChange(value?.id || "")}
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                label="Group"
-                                                margin="dense"
-                                                fullWidth
-                                            />
-                                        )}
-                                    />
-                                );
-                            }}
-                        />
-
-                        <Controller
-                            name="user_id"
-                            control={controlMember}
-                            render={({ field }) => {
-                                const selectedUser =
-                                    getAllUserData.find((u) => u.id === field.value) || null;
-
-                                return (
-                                    <Autocomplete
-                                        options={getAllUserData}
-                                        value={selectedUser}
-                                        getOptionLabel={(option) =>
-                                            option ? `${option.name} (${option.user_id})` : ""
-                                        }
-                                        isOptionEqualToValue={(a, b) => a.id === b?.id}
-                                        onChange={(event, value) => field.onChange(value?.id || "")}
-                                        renderInput={(params) => (
-                                            <TextField
-                                                {...params}
-                                                label="Select User"
-                                                margin="dense"
-                                                fullWidth
-                                            />
-                                        )}
-                                    />
-                                );
-                            }}
-                        />
-
-                        <Select
-                            {...registerMember("is_allowed")}
-                            label="Status"
-                            value={memberWatch("is_allowed") || "true"}
-                            sx={{ width: "200px" }}
-                        >
-                            <MenuItem value="true">Allowed</MenuItem>
-                            <MenuItem value="false">Blocked</MenuItem>
-                        </Select>
-
-
-                    </DialogContent>
-
-                    <DialogActions>
-                        <Button variant='outlined' onClick={() => setMemberDialog(false)}>Cancel</Button>
-                        <Button type="submit" variant="contained">Save</Button>
-                    </DialogActions>
-                </form>
-            </Dialog>
-
+            <MemberManagementModal
+                open={memberDialog}
+                onClose={() => {
+                    setMemberDialog(false);
+                    resetMember();
+                    setEditingMember(null);
+                }}
+                groups={groups}
+                getAllUserData={getAllUserData}
+                controlMember={controlMember}
+                registerMember={registerMember}
+                memberWatch={memberWatch}
+                handleSubmitMember={handleSubmitMember}
+                handleMemberSubmit={handleMemberSubmit}
+            />
         </Box>
     );
 };
