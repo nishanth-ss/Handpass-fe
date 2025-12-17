@@ -46,7 +46,6 @@ handpassApi.interceptors.request.use(
 handpassApi.interceptors.response.use(
   (response) => response.data, // Directly return the response data body
   (error) => {
-    alert(`Network error (${error.message})`);
     return Promise.reject(error);
   }
 );

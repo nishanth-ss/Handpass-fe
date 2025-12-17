@@ -9,6 +9,10 @@ export const createGroup = (groupData) => {
   return handpassApi.post('/api/group', groupData);
 };
 
+export const createGroupUsers = (groupData) => {
+  return handpassApi.post('/api/group/add-group', groupData);
+};
+
 /**
  * Get all groups
  * @returns {Promise} - Axios response with groups array
@@ -45,4 +49,10 @@ export const deleteGroup = (id, hardDelete = false) => {
  */
 export const getGroupById = (id) => {
   return handpassApi.get(`/api/group/${id}`);
+};
+
+
+// User delete specific group
+export const deleteGroupByUser = (id) => {
+  return handpassApi.delete(`/api/group/members/${id}`);
 };
