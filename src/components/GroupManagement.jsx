@@ -15,15 +15,20 @@ import {
     getGroups,
     createGroup,
     updateGroup,
+    deleteGroup,
+    createGroupUsers,
+    deleteGroupByUser,
 } from '../api/groupApi';
 import { getAllDevices } from '../api/handpassApi';
 import { addGroupMember, getSpecifiGroupMembers, removeGroupMember, updateGroupMember } from '../api/memberApi';
 
 import { useForm } from 'react-hook-form';
-import { FaArrowLeftLong } from "react-icons/fa6";
+import { FaArrowLeftLong, FaCloudShowersHeavy } from "react-icons/fa6";
 import { getAllUsers } from '../api/usersApi';
 import MemberManagementModal from './innerComponents/groupmanagement/MemberManagementModal';
 import GroupManagementModal from './innerComponents/groupmanagement/GroupManagementModal';
+import UsersManagementModal from './innerComponents/groupmanagement/UserManagement';
+import { IoCloseCircle } from "react-icons/io5";
 
 const GroupManagement = () => {
 
@@ -40,12 +45,21 @@ const GroupManagement = () => {
 
     const [groupDialog, setGroupDialog] = useState(false);
     const [memberDialog, setMemberDialog] = useState(false);
+    const [usersManagementModalOpen, setUsersManagementModalOpen] = useState(false);
+
+    const [viewMemberTable, setViewMemberTable] = useState(false);
 
     const [editingGroup, setEditingGroup] = useState(null);
     const [editingMember, setEditingMember] = useState(null);
+    const [editingUser, setEditingUser] = useState(null);
+    const [deviceOptions, setDeviceOptions] = useState([]);
+    const [devicePage, setDevicePage] = useState(1);
+    const [deviceHasMore, setDeviceHasMore] = useState(true);
+    const [deviceLoading, setDeviceLoading] = useState(false);
+    const [deviceSearch, setDeviceSearch] = useState("");
+    const [editUser, setEditUser] = useState(null);
 
     const { showNotification } = useNotification();
-
 
     // ===== FORM A: GROUP FORM =====
     const {
@@ -79,6 +93,16 @@ const GroupManagement = () => {
         }
     });
 
+    const {
+        register: registerUser,
+        control: controlUser,
+        handleSubmit: handleSubmitUser,
+        reset: resetUser,
+    } = useForm({
+        defaultValues: {
+            group_ids: [],   // ✅ IMPORTANT
+        }
+    });
 
     // ===== FETCH DATA =====
     const fetchGroups = async () => {
@@ -87,7 +111,6 @@ const GroupManagement = () => {
             const res = await getGroups();
             setGroups(res.data || []);
         } catch (error) {
-            console.error('Error fetching groups:', error);
             const errorMessage = error.response?.data?.message || 'Failed to load groups';
             showNotification(errorMessage, "error");
 
@@ -107,7 +130,6 @@ const GroupManagement = () => {
             const res = await getSpecifiGroupMembers(groupID);
             setMembers(res.data || []);
         } catch (error) {
-            console.error('Error fetching members:', error);
             const errorMessage = error.response?.data?.message || 'Failed to load group members';
             showNotification(errorMessage, "error");
 
@@ -122,12 +144,61 @@ const GroupManagement = () => {
         }
     };
 
+    const fetchDevicesPaginated = async ({ page = 1, search = "", value } = {}) => {
+
+        setDeviceLoading(true);
+
+        try {
+            const res = await getGroups({ page, limit: 20, search });
+            const groups = res.data || [];
+
+            // ✅ group_ids from selected user
+            const allowedGroupIds = value?.groups?.map(g => g.common_group) || [];
+
+            // ✅ Flatten devices
+            let flattened = groups.flatMap(group =>
+                (group.devices || []).map(device => ({
+                    id: device.device_id,
+                    group_id: group.id,
+                    device_id: device.device_id,
+                    device_name: device.device_name,
+                    sn: device.sn,
+                    group_name: device.group_name
+                }))
+            );
+
+            // ✅ FILTER by user's group_id
+            if (allowedGroupIds.length > 0) {
+                flattened = flattened.filter(d =>
+                    !allowedGroupIds.some(id => id === d.group_id)
+                );
+            }
+
+            setDeviceOptions(prev => {
+                const map = new Map();
+                [...(page === 1 ? [] : prev), ...flattened].forEach(item => {
+                    map.set(item.device_id, item); // ✅ dedupe by device
+                });
+                return Array.from(map.values());
+            });
+
+            if (!res.pagination?.has_next) {
+                setDeviceHasMore(false);
+            }
+
+            setDevicePage(page);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setDeviceLoading(false);
+        }
+    };
+
     const fetchDevices = async () => {
         try {
             const res = await getAllDevices();
             setDevices(res.data || []);
         } catch (error) {
-            console.error('Error fetching devices:', error);
             const errorMessage = error.response?.data?.message || 'Failed to load devices';
             showNotification(errorMessage, "error");
 
@@ -144,10 +215,9 @@ const GroupManagement = () => {
 
     const fetchAllUsers = async () => {
         try {
-            const res = await getAllUsers();
+            const res = await getAllUsers('/with-group');
             setGetAllUserData(res.data);
         } catch (error) {
-            console.error('Error fetching users:', error);
             const errorMessage = error.response?.data?.message || 'Failed to load users';
             showNotification(errorMessage, "error");
 
@@ -165,6 +235,23 @@ const GroupManagement = () => {
         fetchDevices();
         fetchAllUsers();
     }, []);
+
+    useEffect(() => {
+        // console.log("editUser",editUser);
+
+        if (!editUser) return;
+
+        // reset pagination when user changes
+        setDevicePage(1);
+        setDeviceHasMore(true);
+        setDeviceOptions([]);
+
+        fetchDevicesPaginated({
+            page: 1,
+            search: "",
+            value: editUser
+        });
+    }, [editUser]);
 
 
     // =======================
@@ -234,6 +321,21 @@ const GroupManagement = () => {
         setMemberDialog(true);
     };
 
+    const openEditUser = (user) => {
+        setEditingUser(user);
+
+        // Convert user's groups → matching device options
+        const selectedDevices = deviceOptions.filter(opt =>
+            user.groups?.some(g => g.group_id === opt.group_id)
+        );
+
+        resetUser({
+            group_ids: selectedDevices, // ✅ FULL OBJECTS
+        });
+
+        setUsersManagementModalOpen(true);
+    };
+
     const handleMemberSubmit = async (data) => {
         try {
             if (editingMember) {
@@ -246,23 +348,9 @@ const GroupManagement = () => {
             setMemberDialog(false);
             fetchMembers(getGroupID);
         } catch (error) {
-            console.error('Error saving member:', error);
             showNotification(`Failed to ${editingMember ? 'update' : 'add'} member`, 'error');
         }
     };
-
-    // const updateWiegandFlag = async (row, value) => {
-
-    //     try {
-    //         await updateGroupMember(row?.id, { wiegand_flag: value, group_id: row?.group_id, user_id: row?.user_id });
-    //         fetchMembers(getGroupID);
-    //         showNotification("Permission updated", "success");
-    //     } catch (e) {
-    //         console.error("Update failed", e);
-    //         showNotification("Failed to update permission", "error");
-    //     }
-    // };
-
 
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to remove this member from the group?')) {
@@ -271,11 +359,20 @@ const GroupManagement = () => {
                 showNotification('Member removed successfully', 'success');
                 fetchMembers(getGroupID);
             } catch (error) {
-                console.error('Error removing member:', error);
                 showNotification('Failed to remove member', 'error');
             }
         }
     };
+
+    const handleDeleteGroup = async (id) => {
+        try {
+            await deleteGroup(id)
+            showNotification('Group deleted successfully', 'success');
+            fetchGroups();
+        } catch (error) {
+            showNotification('Failed to delete group', 'error');
+        }
+    }
 
     // ====================
     // TABLE COLUMNS
@@ -299,7 +396,7 @@ const GroupManagement = () => {
         {
             field: "actions",
             headerName: "Actions",
-            width: 190,
+            flex: 1,
             renderCell: (params) => (
                 <>
                     <IconButton onClick={() => openEditGroup(params.row)}>
@@ -307,27 +404,81 @@ const GroupManagement = () => {
                     </IconButton>
 
                     <IconButton onClick={() => alert("delete")}>
-                        <DeleteIcon color="error" />
+                        <DeleteIcon color="error" onClick={() => handleDeleteGroup(params.row?.id)} />
                     </IconButton>
 
-                    <Button size="small" variant='contained' color='success' onClick={() => { setShowGroupTable(false); setGetGroupID(params.row.id); fetchMembers(params.row.id); }}>
-                        + Add
+                    <Button size="small" variant='contained' color='success' onClick={() => { setViewMemberTable(true); setGetGroupID(params.row.id); fetchMembers(params.row.id); }}>
+                        View
                     </Button>
                 </>
             )
         }
     ];
 
-    const memberColumns = [
-        { field: "group_name", headerName: "Group", flex: 1, renderCell: (params)=>{
-            console.log(params);
-            
-            return (
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span>{params.value}</span>
-                </div>
+    const usersColumn = [
+        {
+            field: "name",
+            headerName: "User Name",
+            flex: 1,
+        },
+        {
+            field: "role",
+            headerName: "Role",
+            flex: 1
+        },
+        {
+            field: "group_id", headerName: "Group ID", flex: 1,
+            renderCell: (params) => {
+                if (!params.row.groups || params.row.groups.length === 0) {
+                    return "-";
+                }
+
+                return (
+                    <div
+                        style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            width: "100%",
+                        }}
+                    >
+                        {params.row.groups.map((val, index) => (
+                            <div key={val.group_id || index} style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                                {index + 1}. {val.group_name}
+                                <span style={{ cursor: "pointer", color: "red" }}><IoCloseCircle onClick={() => handleDeleteGroupByUser(val.group_id)} /></span>
+                            </div>
+                        ))}
+                    </div>
+                );
+            }
+        },
+
+        {
+            field: "actions",
+            headerName: "Actions",
+            flex: 1,
+            renderCell: (params) => (
+                <>
+                    <IconButton onClick={() => { openEditUser(params.row); setEditUser(params.row) }}>
+                        <EditIcon color="primary" />
+                    </IconButton>
+                    <IconButton onClick={() => handleDelete(params.row.id)}>
+                        <DeleteIcon color="error" />
+                    </IconButton>
+                </>
             )
-        } },
+        }
+    ]
+
+    const memberColumns = [
+        {
+            field: "group_name", headerName: "Group", flex: 1, renderCell: (params) => {
+                return (
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span>{params.value}</span>
+                    </div>
+                )
+            }
+        },
         { field: "name", headerName: "User", flex: 1 },
         {
             field: "is_allowed", headerName: "Status", flex: 1,
@@ -401,22 +552,53 @@ const GroupManagement = () => {
         //         )
         //     }
         // },
-        {
-            field: "actions",
-            headerName: "Actions",
-            width: 150,
-            renderCell: (params) => (
-                <>
-                    <IconButton onClick={() => openEditMember(params.row)}>
-                        <EditIcon color="primary" />
-                    </IconButton>
-                    <IconButton onClick={() => handleDelete(params.row.id)}>
-                        <DeleteIcon color="error" />
-                    </IconButton>
-                </>
-            )
-        }
+        // {
+        //     field: "actions",
+        //     headerName: "Actions",
+        //     width: 150,
+        //     renderCell: (params) => (
+        //         <>
+        //             <IconButton onClick={() => openEditMember(params.row)}>
+        //                 <EditIcon color="primary" />
+        //             </IconButton>
+        //             <IconButton onClick={() => handleDelete(params.row.id)}>
+        //                 <DeleteIcon color="error" />
+        //             </IconButton>
+        //         </>
+        //     )
+        // }
     ];
+
+    const handleDeleteGroupByUser = async (groupId) => {
+        try {
+            await deleteGroupByUser(groupId);
+            showNotification("Group removed from user", "success");
+
+            // ✅ REFETCH USERS
+            fetchAllUsers();
+        } catch (e) {
+            showNotification("Failed to remove group", "error");
+        }
+    };
+
+
+    const handleUserSubmit = async (data) => {
+        try {
+            await createGroupUsers({
+                ...data,
+                user_id: editingUser.id,
+            });
+
+            showNotification("User groups updated", "success");
+
+            await fetchAllUsers(); // ✅ refresh table
+            setUsersManagementModalOpen(false);
+
+            resetUser({ group_ids: "" });
+        } catch (error) {
+            showNotification("Failed to update user groups", "error");
+        }
+    };
 
 
     return (
@@ -424,9 +606,9 @@ const GroupManagement = () => {
 
             {/* ============ HEADER ============ */}
             <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
-                <h2>{showGroupTable ? "Group Management" : "Group Member Management"}</h2>
+                <h2 style={{ margin: "0" }}>{showGroupTable ? "Group Management" : "Group Member Management"}</h2>
 
-                {showGroupTable ? (
+                {/* {showGroupTable ? (
                     <Button variant="contained" sx={{ height: "40px" }} startIcon={<AddIcon />} onClick={openAddGroup}>
                         Add Group
                     </Button>
@@ -440,22 +622,27 @@ const GroupManagement = () => {
                     >
                         Add Member
                     </Button>
-                }
+                } */}
+                {!viewMemberTable ? <div style={{ border: "1px solid #ccc" }}>
+                    <Button variant={showGroupTable ? "contained" : "outlined"} onClick={() => setShowGroupTable(!showGroupTable)} >Group</Button>
+                    <Button variant={!showGroupTable ? "contained" : "text"} onClick={() => setShowGroupTable(!showGroupTable)}>Users</Button>
+                </div> : <Button variant='outlined' onClick={() => setViewMemberTable(false)} style={{ display: 'flex', alignItems: "center", gap: 2 }}><FaArrowLeftLong /> Go to main</Button>}
             </Box>
 
-            <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-                {!showGroupTable && (
-                    <Button variant="outlined" sx={{ display: "flex", gap: 1, alignItems: "center" }} onClick={() => setShowGroupTable(true)}><FaArrowLeftLong /> Back</Button>
-                )}
-                {/* <Button variant="outlined" startIcon={<RefreshIcon />} onClick={fetchGroups}>
-                    Refresh
-                </Button> */}
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+                {
+                    showGroupTable && !viewMemberTable && (
+                        <Button variant="contained" sx={{ height: "40px" }} startIcon={<AddIcon />} onClick={openAddGroup}>
+                            Add Group
+                        </Button>
+                    )
+                }
             </Box>
 
 
             {/* ============ TABLES ============ */}
 
-            {showGroupTable ? (
+            {!viewMemberTable && (showGroupTable ? (
                 <DataGrid
                     rows={groups}
                     columns={groupColumns}
@@ -481,7 +668,13 @@ const GroupManagement = () => {
                         },
                     }}
                 />) : (
-                <DataGrid rows={members} columns={memberColumns} getRowId={(r) => r.id} autoHeight
+
+                <DataGrid
+                    rows={getAllUserData}
+                    columns={usersColumn}
+                    getRowId={(r) => r.id}
+                    autoHeight
+                    getRowHeight={() => 'auto'}
                     disableRowSelectionOnClick
                     disableSelectionOnClick
                     sx={{
@@ -500,9 +693,13 @@ const GroupManagement = () => {
                         '& .MuiDataGrid-row:hover': {
                             backgroundColor: 'rgba(0,0,0,0.02)', // optional hover style
                         },
+                        "& .MuiDataGrid-cell": {
+                            display: "flex",
+                            alignItems: "center",   // 👈 vertical center for ALL cells
+                        }
                     }}
                 />
-            )}
+            ))}
 
 
             {/* ======================================================
@@ -520,27 +717,47 @@ const GroupManagement = () => {
                 saveGroup={saveGroup}
             />
 
-
-
             {/* ======================================================
                      MEMBER FORM DIALOG
             ====================================================== */}
 
-            <MemberManagementModal
-                open={memberDialog}
-                onClose={() => {
-                    setMemberDialog(false);
-                    resetMember();
-                    setEditingMember(null);
-                }}
-                groups={groups}
-                getAllUserData={getAllUserData}
-                controlMember={controlMember}
-                registerMember={registerMember}
-                memberWatch={memberWatch}
-                handleSubmitMember={handleSubmitMember}
-                handleMemberSubmit={handleMemberSubmit}
+            <UsersManagementModal
+                open={usersManagementModalOpen}
+                onClose={() => setUsersManagementModalOpen(false)}
+                devices={devices}
+                controlMember={controlUser}
+                registerMember={registerUser}
+                handleSubmitMember={handleSubmitUser}
+                handleMemberSubmit={handleUserSubmit}
+                deviceOptions={deviceOptions || []}
+                deviceLoading={deviceLoading}
+                setDeviceSearch={setDeviceSearch}
+                setDeviceHasMore={setDeviceHasMore}
+                fetchDevicesPaginated={fetchDevicesPaginated}
+                devicePage={devicePage}
             />
+
+            {viewMemberTable && <DataGrid rows={members} columns={memberColumns} getRowId={(r) => r.id} autoHeight
+                disableRowSelectionOnClick
+                disableSelectionOnClick
+                sx={{
+                    '& .MuiDataGrid-cell:focus': {
+                        outline: 'none',
+                    },
+                    '& .MuiDataGrid-columnHeader:focus': {
+                        outline: 'none',
+                    },
+                    '& .MuiDataGrid-cell:focus-within': {
+                        outline: 'none',
+                    },
+                    '& .MuiDataGrid-row.Mui-selected': {
+                        backgroundColor: 'inherit !important',
+                    },
+                    '& .MuiDataGrid-row:hover': {
+                        backgroundColor: 'rgba(0,0,0,0.02)', // optional hover style
+                    },
+                }}
+            />}
         </Box>
     );
 };
