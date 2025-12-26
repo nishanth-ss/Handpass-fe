@@ -81,7 +81,7 @@ export default function DevicesPage() {
                 {device.location}
               </p>
               <div className="mt-4 p-3 bg-muted/40 rounded-lg text-xs font-mono text-muted-foreground flex items-center justify-between">
-                <span>IP: {device.ipAddress || "Dynamic"}</span>
+                <span>IP: {device.device_ip || "Dynamic"}</span>
                 <Signal className="w-3 h-3 text-emerald-500" />
               </div>
             </CardContent>

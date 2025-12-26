@@ -10,6 +10,7 @@ export type Device = {
   name: string;
   type: string;
   createdAt: string;
+  sn: string;
 };
 
 // Example schema for creating a device

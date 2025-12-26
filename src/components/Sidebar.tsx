@@ -7,11 +7,12 @@ import {
   Clock, 
   FileText, 
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  Group,
+
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { navigate } from "wouter/use-browser-location";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { label: "Remote Groups", href: "/remote-groups", icon: Network },
   { label: "Time Schedules", href: "/time-groups", icon: Clock },
   { label: "Reports", href: "/reports", icon: FileText },
+  { label: "Group Management", href: "/group-management", icon: Group },
 ];
 
 export function Sidebar() {
@@ -65,21 +67,17 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-border bg-muted/20">
-        <div className="flex items-center gap-3 mb-4 px-2">
-          {/* <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+        {/* <div className="flex items-center gap-3 mb-4 px-2">
+          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">
             {user?.name?.substring(0, 2).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold truncate">{user?.name}</p>
             <p className="text-xs text-muted-foreground truncate capitalize">{user?.role.toLowerCase()}</p>
-          </div> */}
-        </div>
+          </div>
+        </div> */}
         <button
           // onClick={() => logout()}
-          onClick={()=>{
-            localStorage.clear();
-            navigate("/login");
-          }}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
         >
           <LogOut className="w-4 h-4" />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     login({ email, password });
@@ -19,7 +20,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <div className="absolute inset-0 bg-grid-slate-200 mask-[linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-slate-800" />
-      
+
       <Card className="w-full max-w-md relative z-10 glass-card border-none shadow-2xl">
         <CardHeader className="text-center space-y-2 pb-8">
           <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/25 mb-4">
@@ -53,8 +54,8 @@ export default function Login() {
                 required
               />
             </div>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full h-11 text-base font-semibold shadow-lg shadow-primary/20 text-white"
               disabled={isLoggingIn}
             >

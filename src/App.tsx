@@ -1,33 +1,35 @@
-import { Switch, Route, Redirect } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { Switch, Route, useLocation, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useAuth } from "@/hooks/use-auth";
-import { Loader2 } from "lucide-react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+// Pages
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import UsersPage from "@/pages/Users";
 import DevicesPage from "@/pages/Devices";
+import { Layout } from "@/components/Layout";
 // import RemoteGroupsPage from "@/pages/RemoteGroups";
 // import ReportsPage from "@/pages/Reports";
 import NotFound from "@/pages/not-found";
+import { useAuthContext } from "./hooks/AuthContext";
+import GroupManagement from "./pages/GroupManagement";
+import { NotificationProvider } from "./context/NotificationContext";
+
+// Create a single QueryClient instance
+const queryClient = new QueryClient();
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  // const { user, isLoadingUser  } = useAuth();
+  const { isAuthenticated } = useAuthContext();
+  const [location] = useLocation();
 
-  // if (isLoadingUser ) {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center bg-background">
-  //       <Loader2 className="w-8 h-8 animate-spin text-primary" />
-  //     </div>
-  //   );
-  // }
+  if (!isAuthenticated && location !== "/login") {
+    return <Redirect to="/login" />;
+  }
 
-  // if (!user) {
-  //   return <Redirect to="/login" />;
-  // }
+  if (isAuthenticated && location === "/login") {
+    return <Redirect to="/dashboard" />;
+  }
 
   return <Component />;
 }
@@ -53,11 +55,14 @@ function Router() {
       <Route path="/reports">
         <ProtectedRoute component={ReportsPage} />
       </Route> */}
+      <Route path="/group-management">
+        <ProtectedRoute component={GroupManagement} />
+      </Route>
 
       {/* Redirect root to dashboard */}
-      {/* <Route path="/">
+      <Route path="/">
         <Redirect to="/dashboard" />
-      </Route> */}
+      </Route>
 
       {/* 404 */}
       <Route component={NotFound} />
@@ -69,8 +74,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Router />
+        <NotificationProvider>
+          <Toaster />
+          <Router />
+        </NotificationProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
