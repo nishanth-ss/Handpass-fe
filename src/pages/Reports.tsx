@@ -1,12 +1,92 @@
 import { Layout } from "@/components/Layout";
-import { useReports } from "@/hooks/use-reports";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
+import { Autocomplete, TextField, Button } from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers";
+import { getAllUsers as fetchAllUsers } from "../api/usersApi";
+import { getReports } from "@/hooks/use-reports";
+import { useDevices } from "@/hooks/use-devices";
 
 export default function Reports() {
-  const { accessLogs, enrollments, isLoading } = useReports();
+
+  const [filters, setFilters] = useState({
+    sn: "",
+    name: "",
+    user_id: "",
+    palm_type: "",
+    start_date: null,
+    end_date: null,
+    format: "csv",
+  });
+  const [snList, setSnList] = useState([]);
+  const [nameList, setNameList] = useState([]);
+  const [userList, setUserList] = useState([]);
+  const [palmTypeList, setPalmTypeList] = useState([]);
+  const { devices, isLoading, createDevice, deleteDevice, updateDevice } = useDevices();
+
+
+
+  useEffect(() => {
+    getAllUsers()
+  }, []);
+
+  const fetchReports = async (filters: any) => {
+    const customPayload = {
+      ...filters,
+      user_id: filters.user_id || "",
+      start_date: filters.start_date?.toISOString() || "",
+      end_date: filters.end_date?.toISOString() || "",
+      sn: filters.sn || "",
+    };
+
+    try {
+      const response = await getReports(customPayload);
+
+      if (response) {
+        downloadCSV(response); // ⬅ Download CSV data
+      } else {
+        alert("No data found!");
+      }
+
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const downloadCSV = (csvText: any) => {
+    const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "reports.csv";
+    link.click();
+
+    URL.revokeObjectURL(url);
+  };
+
+  // const getAllDevicesData = async () => {
+  //   try {
+  //     const response = await getAllDevices();
+  //     setSnList(response?.data);
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // }
+
+  const getAllUsers = async () => {
+    try {
+      const response = await fetchAllUsers();
+      setUserList(response?.data);
+    } catch (error) {
+      console.log(error);
+
+    }
+  }
+
+  const applyFilters = () => {
+    fetchReports(filters)
+  }
+  console.log(devices);
 
   return (
     <Layout>
@@ -15,7 +95,7 @@ export default function Reports() {
         <p className="text-muted-foreground mt-1">Detailed logs of access attempts and enrollments.</p>
       </div>
 
-      <Tabs defaultValue="access" className="w-full">
+      {/* <Tabs defaultValue="access" className="w-full">
         <TabsList className="bg-muted/50 p-1 mb-6">
           <TabsTrigger value="access">Access Logs</TabsTrigger>
           <TabsTrigger value="enrollment">Enrollments</TabsTrigger>
@@ -92,7 +172,64 @@ export default function Reports() {
             </Table>
           </div>
         </TabsContent>
-      </Tabs>
+      </Tabs> */}
+
+      <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+
+        {/* SN Filter */}
+        <Autocomplete
+          options={devices}
+          getOptionLabel={(option) => option.sn || ""}
+          value={filters.sn}
+          onChange={(e, v) => setFilters({ ...filters, sn: v })}
+          renderInput={(params) => <TextField {...params} label="SN" />}
+          sx={{ width: 250 }}
+        />
+
+        {/* User ID Filter */}
+        <Autocomplete
+          options={userList}
+          getOptionLabel={(option) => option.name || ""}
+          value={filters.user_id}
+          onChange={(e, v) => setFilters({ ...filters, user_id: v })}
+          renderInput={(params) => <TextField {...params} label="User" />}
+          sx={{ width: 250 }}
+        />
+
+        {/* Palm Type Filter */}
+        {/* <Autocomplete
+                    options={palmTypeList}
+                    value={filters.palm_type}
+                    onChange={(e, v) => setFilters({ ...filters, palm_type: v })}
+                    renderInput={(params) => <TextField {...params} label="Palm Type" />}
+                    sx={{ width: 250 }}
+                /> */}
+
+        {/* Date Range */}
+        <DatePicker
+          label="Start Date"
+          value={filters.start_date}
+          onChange={(newDate: any) =>
+            setFilters({ ...filters, start_date: newDate })
+          }
+        />
+
+        <DatePicker
+          label="End Date"
+          value={filters.end_date}
+          onChange={(newDate: any) =>
+            setFilters({ ...filters, end_date: newDate })
+          }
+        />
+      </div>
+
+      <Button
+        variant="contained"
+        onClick={applyFilters}
+        sx={{ marginTop: 3 }}
+      >
+        Download CSV
+      </Button>
     </Layout>
   );
 }

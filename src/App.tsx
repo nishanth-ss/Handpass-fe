@@ -2,6 +2,8 @@ import { Switch, Route, useLocation, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 // Pages
 import Login from "@/pages/Login";
@@ -10,7 +12,7 @@ import UsersPage from "@/pages/Users";
 import DevicesPage from "@/pages/Devices";
 import { Layout } from "@/components/Layout";
 // import RemoteGroupsPage from "@/pages/RemoteGroups";
-// import ReportsPage from "@/pages/Reports";
+import ReportsPage from "@/pages/Reports";
 import NotFound from "@/pages/not-found";
 import { useAuthContext } from "./hooks/AuthContext";
 import GroupManagement from "./pages/GroupManagement";
@@ -51,10 +53,10 @@ function Router() {
       </Route>
       {/* <Route path="/remote-groups">
         <ProtectedRoute component={RemoteGroupsPage} />
-      </Route>
+      </Route> */}
       <Route path="/reports">
         <ProtectedRoute component={ReportsPage} />
-      </Route> */}
+      </Route>
       <Route path="/group-management">
         <ProtectedRoute component={GroupManagement} />
       </Route>
@@ -75,12 +77,14 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <NotificationProvider>
-          <Toaster />
-          <Router />
-        </NotificationProvider>
-      </TooltipProvider>
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <TooltipProvider>
+          <NotificationProvider>
+            <Router />
+            <Toaster />
+          </NotificationProvider>
+        </TooltipProvider>
+      </LocalizationProvider>
     </QueryClientProvider>
   );
 }

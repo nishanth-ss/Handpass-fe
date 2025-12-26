@@ -62,3 +62,7 @@ export function useReports() {
       attendanceQuery.isLoading,
   };
 }
+
+export const getReports = (payload: any) => {
+  return api.post('/api/report/access-list',payload); // API path: /v1/device/getAll
+};
