@@ -151,7 +151,7 @@ const GroupManagement = () => {
         try {
             // Convert form data to API format
             const apiData = {
-                groupName: formData.group_name,
+                group_name: formData.group_name,
                 description: formData.description,
                 device_id: formData.device_id,
                 is_active: formData.is_active

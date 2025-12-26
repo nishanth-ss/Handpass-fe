@@ -9,10 +9,12 @@ import {
   LogOut,
   ShieldCheck,
   Group,
+  ChessBishopIcon,
 
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
+import { IoHardwareChipSharp } from "react-icons/io5";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -22,6 +24,7 @@ const NAV_ITEMS = [
   { label: "Time Schedules", href: "/time-groups", icon: Clock },
   { label: "Reports", href: "/reports", icon: FileText },
   { label: "Group Management", href: "/group-management", icon: Group },
+  { label: "Firmware Check", href: "/firm-check", icon: IoHardwareChipSharp },
 ];
 
 export function Sidebar() {

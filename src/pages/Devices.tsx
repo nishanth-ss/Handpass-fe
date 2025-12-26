@@ -1,26 +1,80 @@
 import { Layout } from "@/components/Layout";
 import { useDevices } from "@/hooks/use-devices";
 import { Button } from "@/components/ui/button";
-import { MonitorSmartphone, Trash2, Plus, Signal } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { MonitorSmartphone, Trash2, Plus, Signal, Pencil } from "lucide-react";
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { TextField } from "@mui/material";
+
+interface Device {
+  id?: string;
+  device_name: string;
+  location: string;
+  device_ip: string;
+}
 
 export default function DevicesPage() {
-  const { devices, isLoading, createDevice, deleteDevice } = useDevices();
+  const { devices, isLoading, createDevice, deleteDevice,updateDevice } = useDevices();
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [ip, setIp] = useState("");
+  const [editMode, setEditMode] = useState<Partial<Device>>({});
+
+  console.log(Object.keys(editMode).length > 0);
+  // console.log("name",name);
+  
+  useEffect(() => {
+    console.log("editMode changed:", editMode);
+    if (Object.keys(editMode).length > 0) {
+      console.log("Setting form values for edit mode");
+      console.log("editMode?.device_name",editMode?.device_ip);
+      
+      setName(editMode.device_name || '');
+      setLocation(editMode.location || '');
+      setIp(editMode.device_ip || '');
+    }
+  }, [editMode]);
+  // This will help debug the state changes
+  useEffect(() => {
+    console.log("Current editMode:", editMode);
+  }, [editMode]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createDevice(
-      { deviceName: name, location, ipAddress: ip }, 
-      { onSuccess: () => { setIsOpen(false); setName(""); setLocation(""); setIp(""); } }
-    );
+    const deviceData = {
+      device_name: name,
+      location,
+      device_ip: ip
+    };
+     const mutationOptions = {
+    onSuccess: () => {
+      setIsOpen(false);
+      resetForm();
+      
+    }
+  };
+    if (editMode.id) {
+      // Handle update logic here if you have an update function
+         updateDevice({ id: editMode.id, ...deviceData }, mutationOptions);
+
+    } else {
+      createDevice(deviceData, {
+        onSuccess: () => {
+          setIsOpen(false);
+          resetForm();
+        }
+      });
+    }
+  };
+  // Add this helper function to reset the form
+  const resetForm = () => {
+    setName('');
+    setLocation('');
+    setIp('');
+    setEditMode({});
   };
 
   return (
@@ -30,32 +84,32 @@ export default function DevicesPage() {
           <h2 className="text-3xl font-display font-bold">Device Management</h2>
           <p className="text-muted-foreground mt-1">Manage physical access terminals and cameras.</p>
         </div>
-        
+
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button className="shadow-lg shadow-primary/20">
               <Plus className="w-4 h-4 mr-2" />
-              Register Device
+              {editMode.id ? "Edit" : "Register"} Device
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="bg-white">
             <DialogHeader>
-              <DialogTitle>Register New Device</DialogTitle>
+              <DialogTitle>{editMode.id ? "Edit" : "Register"} Device</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              <div className="space-y-2">
+              <div className="space-y-2 flex flex-col">
                 <Label>Device Name</Label>
-                <Input value={name} onChange={e => setName(e.target.value)} placeholder="Main Entrance Cam" required />
+                <TextField size="small" value={name} onChange={e => setName(e.target.value)} placeholder="Main Entrance Cam" required />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 flex flex-col">
                 <Label>Location</Label>
-                <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Building A, Lobby" required />
+                <TextField size="small" value={location} onChange={e => setLocation(e.target.value)} placeholder="Building A, Lobby" />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 flex flex-col">
                 <Label>IP Address</Label>
-                <Input value={ip} onChange={e => setIp(e.target.value)} placeholder="192.168.1.10" />
+                <TextField size="small" value={ip} onChange={e => setIp(e.target.value)} placeholder="192.168.1.10" />
               </div>
-              <Button type="submit" className="w-full">Register</Button>
+              <Button type="submit" className="w-full text-white">{editMode.id ? "Update" : "Register"}</Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -76,7 +130,7 @@ export default function DevicesPage() {
               </div>
             </CardHeader>
             <CardContent className="pt-4">
-              <h3 className="font-bold text-lg">{device.deviceName}</h3>
+              <h3 className="font-bold text-lg">{device.device_name}</h3>
               <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                 {device.location}
               </p>
@@ -86,9 +140,15 @@ export default function DevicesPage() {
               </div>
             </CardContent>
             <CardFooter className="pt-0 justify-end">
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive"
+                onClick={() => { setIsOpen(true); setEditMode(device) }}
+              >
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 className="text-muted-foreground hover:text-destructive"
                 onClick={() => deleteDevice(device.id)}
               >

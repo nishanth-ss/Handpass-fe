@@ -15,7 +15,7 @@ import NotFound from "@/pages/not-found";
 import { useAuthContext } from "./hooks/AuthContext";
 import GroupManagement from "./pages/GroupManagement";
 import { NotificationProvider } from "./context/NotificationContext";
-
+import FirmwareCheck from "./pages/FirmwareCheck";
 // Create a single QueryClient instance
 const queryClient = new QueryClient();
 
@@ -58,7 +58,9 @@ function Router() {
       <Route path="/group-management">
         <ProtectedRoute component={GroupManagement} />
       </Route>
-
+      <Route path="/firm-check">
+        <ProtectedRoute component={FirmwareCheck} />
+      </Route>
       {/* Redirect root to dashboard */}
       <Route path="/">
         <Redirect to="/dashboard" />
